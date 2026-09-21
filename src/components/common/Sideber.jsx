@@ -12,14 +12,16 @@ import { TbHelpSquareRounded } from "react-icons/tb";
 import { RiLogoutCircleRLine } from "react-icons/ri";
 import { GiVerticalBanner } from "react-icons/gi";
 import { Link } from 'react-router';
+import { IoClose } from "react-icons/io5";
 
 
 
 
-const Sideber = () => {
+const Sideber = ({ open = false, onClose = () => {} }) => {
   return (
     <>
-      <section className='w-[20%]  bg-[#064e3b] border-r border-black pt-10 pb-25 fixed px-2  h-full overflow-scroll scrollmain'>
+      {open && <button type="button" aria-label="Close navigation" onClick={onClose} className="fixed inset-0 z-40 bg-black/50 md:hidden" />}
+      <section className={`fixed inset-y-0 left-0 z-50 w-[min(82vw,300px)] bg-[#064e3b] border-r border-black pt-5 pb-25 px-2 h-full overflow-scroll scrollmain transition-transform duration-300 md:w-[20%] md:translate-x-0 ${open ? "translate-x-0" : "-translate-x-full"}`}>
         <div className=" ">
           <div className="p-2 flex justify-between items-center gap-3 cursor-pointer">
 
@@ -29,8 +31,9 @@ const Sideber = () => {
               <h2 className=' text-white text-2xl font-bold '>Dashboard</h2>
             </div>
            </Link>
-            <div className="">
+            <div className="flex items-center gap-3">
               <FaBarsStaggered className='text-white text-[20px]' />
+              <button type="button" onClick={onClose} className="text-white md:hidden" aria-label="Close navigation"><IoClose size={24} /></button>
             </div>
           </div>
 

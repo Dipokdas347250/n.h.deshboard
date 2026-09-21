@@ -3,6 +3,7 @@ import RootLayout from "./components/layout/RootLayout";
 import Home from "./components/pages/Home";
 import About from "./components/pages/About";
 import Login from "./components/auth/Login";
+import Register from "./components/auth/Register";
 import AllBanner from "./components/pages/AllBanner";
 import Get_Banner from "./components/pages/Get_Banner";
 import Add_category from "./components/category/Add_category";
@@ -36,7 +37,10 @@ const router = createBrowserRouter([
   {
     path: "/login",
     Component: Login,
-    
+  },
+  {
+    path: "/register",
+    Component: Register,
   },
 ]);
 

@@ -1,11 +1,21 @@
 import axios from "axios";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 
 const Add_product = () => {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [price, setPrice] = useState("");
+  const [category, setCategory] = useState("");
+  const [categories, setCategories] = useState([]);
   const [images, setImages] = useState([]);
+  const [variants, setVariants] = useState([{ size: "", color: "", sku: "" }]);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    axios.get(`${import.meta.env.VITE_API_URL}/products/allCategory`, { withCredentials: true })
+      .then((response) => setCategories(response.data.data || []))
+      .catch(() => setError("Unable to load categories"));
+  }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -14,6 +24,9 @@ const Add_product = () => {
     formData.append("title", title);
     formData.append("description", description);
     formData.append("price", price);
+    formData.append("category", category);
+    const selectedVariants = variants.filter((variant) => variant.size.trim() || variant.color.trim());
+    formData.append("variants", JSON.stringify(selectedVariants));
     images.forEach((file) => formData.append("images", file));
 
     try {
@@ -32,10 +45,13 @@ const Add_product = () => {
       setTitle("");
       setDescription("");
       setPrice("");
+      setCategory("");
       setImages([]);
+      setVariants([{ size: "", color: "", sku: "" }]);
+      setError("");
 
     } catch (error) {
-      console.error("Error:", error);
+      setError(error.response?.data?.message || "Unable to add product");
     }
   };
   return (
@@ -46,6 +62,7 @@ const Add_product = () => {
         <h2 className="text-2xl font-bold text-white mb-6 text-center">
           Add Product
         </h2>
+        {error && <p className="mb-4 text-center text-red-200">{error}</p>}
 
         <form onSubmit={handleSubmit} className="space-y-5">
 
@@ -81,6 +98,38 @@ const Add_product = () => {
               Price
             </label>
             <input type="number" min="0" value={price} onChange={(e) => setPrice(e.target.value)} className="w-full p-3 rounded-lg bg-white/20 text-white outline-none" required />
+          </div>
+
+          <div>
+            <label className="block text-gray-300 mb-2">Category</label>
+            <select
+              value={category}
+              onChange={(e) => setCategory(e.target.value)}
+              className="w-full p-3 rounded-lg bg-white/20 text-white outline-none"
+              required
+            >
+              <option value="" className="text-gray-900">Select a category</option>
+              {categories.map((item) => (
+                <option key={item._id} value={item._id} className="text-gray-900">
+                  {item.name}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-gray-300 mb-2">Sizes and colors</label>
+            <div className="space-y-2">
+              {variants.map((variant, index) => (
+                <div key={index} className="grid grid-cols-[1fr_1fr_1fr_auto] gap-2">
+                  <input value={variant.size} onChange={(event) => setVariants((current) => current.map((item, itemIndex) => itemIndex === index ? { ...item, size: event.target.value } : item))} placeholder="Size" className="rounded-lg bg-white/20 p-2 text-white" />
+                  <input value={variant.color} onChange={(event) => setVariants((current) => current.map((item, itemIndex) => itemIndex === index ? { ...item, color: event.target.value } : item))} placeholder="Color" className="rounded-lg bg-white/20 p-2 text-white" />
+                  <input value={variant.sku} onChange={(event) => setVariants((current) => current.map((item, itemIndex) => itemIndex === index ? { ...item, sku: event.target.value } : item))} placeholder="SKU" className="rounded-lg bg-white/20 p-2 text-white" />
+                  <button type="button" onClick={() => setVariants((current) => current.filter((_, itemIndex) => itemIndex !== index))} className="rounded-lg bg-red-500 px-3 text-white" disabled={variants.length === 1}>Remove</button>
+                </div>
+              ))}
+              <button type="button" onClick={() => setVariants((current) => [...current, { size: "", color: "", sku: "" }])} className="rounded-lg bg-blue-500 px-4 py-2 text-white">Add option</button>
+            </div>
           </div>
 
           <div>

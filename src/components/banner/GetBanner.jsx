@@ -5,6 +5,8 @@ import { api } from "../../lib/api";
 const GetBanner = () => {
   const [banners, setBanners] = useState([]);
   const [error, setError] = useState("");
+  const [editing, setEditing] = useState(null);
+  const [url, setUrl] = useState("");
 
   useEffect(() => {
    axios.get(`${import.meta.env.VITE_API_URL}/banner/all-banner`, { withCredentials: true })
@@ -23,6 +25,17 @@ const GetBanner = () => {
       setBanners((current) => current.filter((item) => item._id !== id));
     } catch (requestError) {
       setError(requestError.response?.data?.message || "Unable to delete banner");
+    }
+  };
+
+  const saveEdit = async (event) => {
+    event.preventDefault();
+    try {
+      const response = await api.patch("/banner/update-banner", { id: editing, url });
+      setBanners((current) => current.map((item) => item._id === editing ? response.data.data : item));
+      setEditing(null);
+    } catch (requestError) {
+      setError(requestError.response?.data?.message || "Unable to update banner");
     }
   };
 
@@ -47,6 +60,10 @@ const GetBanner = () => {
               className="w-full h-40 object-cover rounded-lg"
             />
 
+            {editing === banner._id ? <form onSubmit={saveEdit} className="mt-3 space-y-2">
+              <input value={url} onChange={(event) => setUrl(event.target.value)} className="w-full rounded bg-white/20 p-2 text-white" placeholder="Redirect URL" />
+              <div className="flex gap-2"><button type="submit" className="flex-1 rounded bg-green-500 py-2 text-white">Save</button><button type="button" onClick={() => setEditing(null)} className="flex-1 rounded bg-white/20 py-2 text-white">Cancel</button></div>
+            </form> : <>
             {/* Info */}
             <div className="mt-3 space-y-1">
               <p className="text-gray-300 text-sm truncate">
@@ -57,6 +74,7 @@ const GetBanner = () => {
 
             {/* Actions */}
             <div className="flex gap-2 mt-4">
+              <button onClick={() => { setEditing(banner._id); setUrl(banner.url || ""); }} className="flex-1 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg text-sm">Edit</button>
               <button
                 onClick={() => window.open(banner.url)}
                 className="flex-1 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg text-sm"
@@ -71,6 +89,7 @@ const GetBanner = () => {
                 Delete
               </button>
             </div>
+            </>}
           </div>
         ))}
 

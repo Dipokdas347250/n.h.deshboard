@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import axios from "axios";
-import { useNavigate } from "react-router";
+import { Link, useNavigate } from "react-router";
+import { AuthShell } from "./Register";
 
 export default function GlassLogin() {
   const navegate = useNavigate();
@@ -10,6 +11,7 @@ export default function GlassLogin() {
   });
 
   const [error, setError] = useState("");
+  const [submitting, setSubmitting] = useState(false);
   const handleChange = (e) => {
     setFormData({
       ...formData,
@@ -31,6 +33,7 @@ export default function GlassLogin() {
 
 
     setError("");
+    setSubmitting(true);
     
     
       axios.post(`${import.meta.env.VITE_API_URL}/auth/login`, formData, { withCredentials: true })
@@ -38,49 +41,43 @@ export default function GlassLogin() {
           navegate("/")
         })
         .catch((error) => {
-          console.error("Error:", error);
-        });
+          setError(error.response?.data?.message || "Unable to sign in.");
+        })
+        .finally(() => setSubmitting(false));
     
 
   };
 
-  return (
-    <div className="relative h-screen flex items-center justify-center bg-linear-to-br from-[#022c22] to-[#064e3b] overflow-hidden">
-      
-
-   
-      <form
-        onSubmit={handleSubmit}
-        className="w-150 h-150 rounded-full bg-white/10 backdrop-blur-xl border border-white/20 shadow-[0_0_60px_rgba(34,197,94,0.3)] flex flex-col items-center justify-center text-white"
-      >
-        <h2 className="text-3xl mb-10 font-bold ">Admin Panel</h2>
+  return <AuthShell title="Dashboard sign in" subtitle="Use your registered account to continue.">
+      <form onSubmit={handleSubmit} className="space-y-3">
         {error && (
           <p className="text-red-500 text-xl mb-4">{error}</p>
         )}
-        <input
+        <input required
           type="email"
           name="email"
           placeholder="Email"
           value={formData.email}
           onChange={handleChange}
-          className="w-100 mb-3 p-4 rounded-lg bg-white/20 outline-none"
+          className="w-full rounded-lg bg-white/20 p-4 outline-none"
         />
-        <input
+        <input required
           type="password"
           name="password"
           placeholder="Password"
           value={formData.password}
           onChange={handleChange}
-          className="w-100 mb-4 p-4 rounded-lg bg-white/20 outline-none"
+          className="w-full rounded-lg bg-white/20 p-4 outline-none"
         />
 
         <button
           type="submit"
-          className="px-20 py-4 bg-green-500 rounded-full hover:bg-green-400 transition cursor-pointer"
+          className="w-full rounded-full bg-green-500 px-6 py-4 transition hover:bg-green-400 disabled:opacity-50"
+          disabled={submitting}
         >
-          Sign In
+          {submitting ? "Signing in..." : "Sign In"}
         </button>
+        <p className="text-center text-sm text-white/70">Need an account? <Link to="/register" className="font-semibold text-green-300 hover:underline">Register</Link></p>
       </form>
-    </div>
-  );
+    </AuthShell>;
 }
