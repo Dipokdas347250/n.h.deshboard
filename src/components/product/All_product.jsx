@@ -3,7 +3,7 @@ import React, { useEffect, useState } from "react";
 const All_product = () => {
   const [categories, setCategories] = useState([]);
   const [editing, setEditing] = useState(null);
-  const [form, setForm] = useState({ title: "", description: "", price: "", sku: "", images: [] });
+  const [form, setForm] = useState({ title: "", description: "", price: "", discountPrice: "", offer: "", sku: "", images: [] });
   const [error, setError] = useState("");
 
   useEffect(() => {
@@ -26,7 +26,7 @@ const All_product = () => {
   const startEdit = (product) => {
     setError("");
     setEditing(product._id);
-    setForm({ title: product.title || "", description: product.description || "", price: product.price || "", sku: product.sku || "", images: [] });
+    setForm({ title: product.title || "", description: product.description || "", price: product.price || "", discountPrice: product.discountPrice ?? product.diccountprice ?? "", offer: product.offer || "", sku: product.sku || "", images: [] });
   };
 
   const saveEdit = async (event) => {
@@ -35,6 +35,8 @@ const All_product = () => {
     data.append("title", form.title);
     data.append("description", form.description);
     data.append("price", form.price);
+    data.append("discountPrice", form.discountPrice);
+    data.append("offer", form.offer);
     data.append("sku", form.sku);
     form.images.forEach((image) => data.append("images", image));
     try {
@@ -47,7 +49,7 @@ const All_product = () => {
   };
   return (
     <>
-    <div className="min-h-screen bg-[#064e3b]/90 p-6">
+    <div className="min-h-screen bg-[#062B63]/95 p-6">
       <h2 className="text-2xl font-bold text-white mb-6">
         All product
       </h2>
@@ -71,32 +73,38 @@ const All_product = () => {
               <input value={form.title} onChange={(event) => setForm({ ...form, title: event.target.value })} className="w-full rounded bg-white/20 p-2 text-white" placeholder="Title" required />
               <textarea value={form.description} onChange={(event) => setForm({ ...form, description: event.target.value })} className="w-full rounded bg-white/20 p-2 text-white" placeholder="Description" required />
               <input type="number" value={form.price} onChange={(event) => setForm({ ...form, price: event.target.value })} className="w-full rounded bg-white/20 p-2 text-white" placeholder="Price" required />
+              <input type="number" min="0" max={form.price || undefined} value={form.discountPrice} onChange={(event) => setForm({ ...form, discountPrice: event.target.value })} className="w-full rounded bg-white/20 p-2 text-white" placeholder="Offer price (optional)" />
+              <input value={form.offer} onChange={(event) => setForm({ ...form, offer: event.target.value })} className="w-full rounded bg-white/20 p-2 text-white" placeholder="Offer label (optional)" />
               <input value={form.sku} onChange={(event) => setForm({ ...form, sku: event.target.value })} className="w-full rounded bg-white/20 p-2 text-white" placeholder="SKU" />
               <input type="file" multiple onChange={(event) => setForm({ ...form, images: Array.from(event.target.files || []) })} className="w-full text-sm text-white" />
               <div className="flex gap-2"><button type="submit" className="flex-1 rounded bg-green-500 py-2 text-white">Save</button><button type="button" onClick={() => setEditing(null)} className="flex-1 rounded bg-white/20 py-2 text-white">Cancel</button></div>
             </form> : <>
             {/* Info */}
             <div className="mt-3 space-y-1 flex items-center gap-2">
-              <h3>category :</h3>
+              <h3>title :</h3>
               <p className="text-gray-300 text-sm truncate">
                 {category.title}
               </p>
               
             </div>
             <div className="mt-3 space-y-1 flex items-center gap-2">
-              <h3>slug :</h3>
+              <h3>SKU :</h3>
               <p className="text-gray-300 text-sm truncate">
                 {category.sku || category.slug}
               </p>
               
             </div>
             <div className="mt-3 space-y-1 flex items-center gap-2">
-              <h3>discount :</h3>
+              <h3>price :</h3>
               <p className="text-gray-300 text-sm truncate">
                 BDT {category.price || 0}
               </p>
-              
-              
+            </div>
+            <div className="mt-3 space-y-1 flex items-center gap-2">
+              <h3>offer :</h3>
+              <p className="text-gray-300 text-sm truncate">
+                {category.discountPrice ?? category.diccountprice ?? "—"} {category.offer ? `(${category.offer})` : ""}
+              </p>
             </div>
 
             {/* Actions */}

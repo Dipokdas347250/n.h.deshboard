@@ -40,7 +40,7 @@ const GetBanner = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#064e3b]/90 p-6">
+    <div className="min-h-screen bg-[#062B63]/95 p-6">
       <h2 className="text-2xl font-bold text-white mb-6">
         All Banners
       </h2>

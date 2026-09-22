@@ -5,6 +5,8 @@ const Add_product = () => {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [price, setPrice] = useState("");
+  const [discountPrice, setDiscountPrice] = useState("");
+  const [offer, setOffer] = useState("");
   const [category, setCategory] = useState("");
   const [categories, setCategories] = useState([]);
   const [images, setImages] = useState([]);
@@ -24,6 +26,8 @@ const Add_product = () => {
     formData.append("title", title);
     formData.append("description", description);
     formData.append("price", price);
+    formData.append("discountPrice", discountPrice);
+    formData.append("offer", offer);
     formData.append("category", category);
     const selectedVariants = variants.filter((variant) => variant.size.trim() || variant.color.trim());
     formData.append("variants", JSON.stringify(selectedVariants));
@@ -45,6 +49,8 @@ const Add_product = () => {
       setTitle("");
       setDescription("");
       setPrice("");
+      setDiscountPrice("");
+      setOffer("");
       setCategory("");
       setImages([]);
       setVariants([{ size: "", color: "", sku: "" }]);
@@ -56,7 +62,7 @@ const Add_product = () => {
   };
   return (
     <>
-     <div className="min-h-screen bg-[#064e3b]/90 flex items-center justify-center p-6">
+    <div className="flex min-h-screen items-center justify-center bg-[#062B63]/95 p-6">
       <div className="w-full max-w-xl bg-white/10 backdrop-blur-lg rounded-2xl shadow-xl p-8">
 
         <h2 className="text-2xl font-bold text-white mb-6 text-center">
@@ -83,11 +89,11 @@ const Add_product = () => {
             <label className="block text-gray-300 mb-2">
              Description
             </label>
-            <input
-              type="text"
+            <textarea
               placeholder="Enter product description"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
+              rows="4"
               className="w-full p-3 rounded-lg bg-white/20 text-white outline-none"
               required
             />
@@ -98,6 +104,16 @@ const Add_product = () => {
               Price
             </label>
             <input type="number" min="0" value={price} onChange={(e) => setPrice(e.target.value)} className="w-full p-3 rounded-lg bg-white/20 text-white outline-none" required />
+          </div>
+
+          <div>
+            <label className="block text-gray-300 mb-2">Offer price</label>
+            <input type="number" min="0" max={price || undefined} value={discountPrice} onChange={(e) => setDiscountPrice(e.target.value)} className="w-full p-3 rounded-lg bg-white/20 text-white outline-none" placeholder="Optional sale price" />
+          </div>
+
+          <div>
+            <label className="block text-gray-300 mb-2">Offer label</label>
+            <input type="text" value={offer} onChange={(e) => setOffer(e.target.value)} className="w-full p-3 rounded-lg bg-white/20 text-white outline-none" placeholder="Example: Eid special offer" />
           </div>
 
           <div>
@@ -121,7 +137,7 @@ const Add_product = () => {
             <label className="block text-gray-300 mb-2">Sizes and colors</label>
             <div className="space-y-2">
               {variants.map((variant, index) => (
-                <div key={index} className="grid grid-cols-[1fr_1fr_1fr_auto] gap-2">
+                <div key={index} className="grid grid-cols-2 gap-2">
                   <input value={variant.size} onChange={(event) => setVariants((current) => current.map((item, itemIndex) => itemIndex === index ? { ...item, size: event.target.value } : item))} placeholder="Size" className="rounded-lg bg-white/20 p-2 text-white" />
                   <input value={variant.color} onChange={(event) => setVariants((current) => current.map((item, itemIndex) => itemIndex === index ? { ...item, color: event.target.value } : item))} placeholder="Color" className="rounded-lg bg-white/20 p-2 text-white" />
                   <input value={variant.sku} onChange={(event) => setVariants((current) => current.map((item, itemIndex) => itemIndex === index ? { ...item, sku: event.target.value } : item))} placeholder="SKU" className="rounded-lg bg-white/20 p-2 text-white" />

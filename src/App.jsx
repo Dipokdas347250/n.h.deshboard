@@ -14,6 +14,7 @@ import Orders from "./components/pages/Orders";
 import Customers from "./components/pages/Customers";
 import Transactions from "./components/pages/Transactions";
 import Analytics from "./components/pages/Analytics";
+import VideoManager from "./components/video/VideoManager";
 
 const router = createBrowserRouter([
   {
@@ -32,6 +33,7 @@ const router = createBrowserRouter([
       { path: "customers", Component: Customers },
       { path: "transactions", Component: Transactions },
       { path: "analytics", Component: Analytics },
+      { path: "videos", Component: VideoManager },
     ],
   },
   {

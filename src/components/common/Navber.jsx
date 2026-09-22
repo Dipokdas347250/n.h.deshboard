@@ -63,10 +63,10 @@ const Navber = ({ onMenuClick }) => {
   };
 
   return <>
-    <nav className="sticky top-0 z-30 border-b border-black bg-gradient-to-br from-[#022c22] to-[#064e3b] px-3 py-3 text-white sm:px-5">
+    <nav className="sticky top-0 z-30 border-b border-[#031d43] bg-linear-to-br from-[#062B63] to-[#1255A4] px-3 py-3 text-white sm:px-5">
       <div className="flex items-center justify-between gap-3">
         <button type="button" onClick={onMenuClick} className="rounded-lg p-2 hover:bg-white/20 md:hidden" aria-label="Open navigation"><IoMenu size={24} /></button>
-        <h2 className="shrink-0 text-lg font-bold sm:text-2xl">N H Shop</h2>
+        <h2 className="shrink-0 text-lg font-bold sm:text-2xl"><span className="text-white">N.H.</span><span className="text-emerald-300">Shop</span></h2>
         <form onSubmit={search} className="ml-auto flex min-w-0 max-w-xl flex-1 items-center gap-2 rounded-lg border border-gray-300 px-3 py-2 sm:ml-8"><input value={query} onChange={(event) => setQuery(event.target.value)} className="min-w-0 w-full bg-transparent text-sm text-white outline-none placeholder:text-gray-300" type="search" placeholder="Search dashboard..." aria-label="Search dashboard" /><button type="submit" aria-label="Search"><IoSearch /></button></form>
         <div className="flex shrink-0 items-center gap-1 sm:gap-3">
           <button type="button" onClick={() => setDark((value) => !value)} className="rounded-full bg-white/20 p-2.5" aria-label="Toggle theme">{dark ? <MdLightMode /> : <MdOutlineDarkMode />}</button>

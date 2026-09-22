@@ -1,5 +1,16 @@
 @import "tailwindcss";
 
+:root {
+  --brand-navy: #062b63;
+  --brand-blue: #1255a4;
+  --brand-green: #16863d;
+  --brand-green-dark: #0f6d31;
+}
+
+body {
+  background: #f4f7fb;
+}
+
 
 /* @theme: {
   extend: {

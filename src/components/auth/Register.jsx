@@ -100,5 +100,5 @@ export default function Register() {
 }
 
 export function AuthShell({ title, subtitle, children }) {
-  return <div className="flex min-h-screen items-center justify-center bg-linear-to-br from-[#022c22] to-[#064e3b] p-6 text-white"><div className="w-full max-w-xl rounded-3xl border border-white/20 bg-white/10 p-8 shadow-[0_0_60px_rgba(34,197,94,0.3)] backdrop-blur-xl"><h2 className="text-center text-3xl font-bold">{title}</h2><p className="mb-8 mt-2 text-center text-white/70">{subtitle}</p>{children}</div></div>;
+  return <div className="flex min-h-screen items-center justify-center bg-linear-to-br from-[#062B63] to-[#1255A4] p-6 text-white"><div className="w-full max-w-xl rounded-3xl border border-white/20 bg-white/10 p-8 shadow-[0_0_60px_rgba(22,134,61,0.3)] backdrop-blur-xl"><h2 className="text-center text-3xl font-bold">{title}</h2><p className="mb-8 mt-2 text-center text-white/70">{subtitle}</p>{children}</div></div>;
 }

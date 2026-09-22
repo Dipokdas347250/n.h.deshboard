@@ -13,6 +13,7 @@ import { RiLogoutCircleRLine } from "react-icons/ri";
 import { GiVerticalBanner } from "react-icons/gi";
 import { Link } from 'react-router';
 import { IoClose } from "react-icons/io5";
+import { FaVideo } from "react-icons/fa";
 
 
 
@@ -21,7 +22,7 @@ const Sideber = ({ open = false, onClose = () => {} }) => {
   return (
     <>
       {open && <button type="button" aria-label="Close navigation" onClick={onClose} className="fixed inset-0 z-40 bg-black/50 md:hidden" />}
-      <section className={`fixed inset-y-0 left-0 z-50 w-[min(82vw,300px)] bg-[#064e3b] border-r border-black pt-5 pb-25 px-2 h-full overflow-scroll scrollmain transition-transform duration-300 md:w-[20%] md:translate-x-0 ${open ? "translate-x-0" : "-translate-x-full"}`}>
+      <section className={`fixed inset-y-0 left-0 z-50 w-[min(82vw,300px)] border-r border-[#031d43] bg-[#062B63] px-2 pb-25 pt-5 transition-transform duration-300 md:w-[20%] md:translate-x-0 ${open ? "translate-x-0" : "-translate-x-full"}`}>
         <div className=" ">
           <div className="p-2 flex justify-between items-center gap-3 cursor-pointer">
 
@@ -108,6 +109,15 @@ const Sideber = ({ open = false, onClose = () => {} }) => {
               </Link>
             </div>
            </div>
+            </div>
+
+            <div className="mt-10 border-b border-gray-300 pb-5">
+              <Link to="/videos">
+                <div className="flex items-center gap-3 rounded-r-lg border-l-4 border-[#064e3b] p-2 transition duration-300 ease-in-out hover:border-green-300 hover:bg-green-300/20">
+                  <FaVideo className='text-[16px] text-white' />
+                  <h2 className='text-lg font-semibold text-white'>Videos</h2>
+                </div>
+              </Link>
             </div>
             
             <div className="">

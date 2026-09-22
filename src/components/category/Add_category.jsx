@@ -37,7 +37,7 @@ const AddCategory = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#064e3b]/90 flex items-center justify-center p-6">
+    <div className="flex min-h-screen items-center justify-center bg-[#062B63]/95 p-6">
       <div className="w-full max-w-xl bg-white/10 backdrop-blur-lg rounded-2xl shadow-xl p-8">
 
         <h2 className="text-2xl font-bold text-white mb-6 text-center">
