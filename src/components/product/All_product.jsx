@@ -1,137 +1,177 @@
-import axios from "axios";
-import React, { useEffect, useState } from "react";
-const All_product = () => {
-  const [categories, setCategories] = useState([]);
+import { useEffect, useState } from "react";
+import { useSearchParams } from "react-router";
+import { api } from "../../lib/api";
+import { useLanguage } from "../../i18n/useLanguage";
+import { PageShell, ErrorNote, SuccessNote, EmptyNote, Field, inputClass } from "../common/PageShell";
+
+const BLANK_FORM = { title: "", description: "", price: "", discountPrice: "", offer: "", sku: "", images: [] };
+
+export default function AllProduct() {
+  const { t, apiMessage, formatPrice } = useLanguage();
+  const [searchParams] = useSearchParams();
+  const search = (searchParams.get("search") || "").toLowerCase();
+
+  const [products, setProducts] = useState(null);
   const [editing, setEditing] = useState(null);
-  const [form, setForm] = useState({ title: "", description: "", price: "", discountPrice: "", offer: "", sku: "", images: [] });
+  const [form, setForm] = useState(BLANK_FORM);
   const [error, setError] = useState("");
+  const [notice, setNotice] = useState("");
 
   useEffect(() => {
-  axios.get(`${import.meta.env.VITE_API_URL}/mainproduct/all-product`, { withCredentials: true })
-      .then((response) => {
-        setCategories(response.data.data);
-        
-      })
-      .catch((error) => {
-        console.error("Error fetching categories:", error);
-      });
-  }, []);
+    let active = true;
 
-  const handleDelete = (id) => {
-    axios.delete(`${import.meta.env.VITE_API_URL}/mainproduct/delete-product/${id}`, { withCredentials: true })
-      .then(() => setCategories((current) => current.filter((item) => item._id !== id)))
-      .catch((error) => console.error("Unable to delete product", error));
+    api.get("/mainproduct/all-product")
+      .then((response) => {
+        if (active) setProducts(response.data.data || []);
+      })
+      .catch((caught) => {
+        if (!active) return;
+        setProducts([]);
+        setError(apiMessage(caught));
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [apiMessage]);
+
+  const remove = async (id) => {
+    if (!window.confirm(t("common.confirmDelete"))) return;
+    try {
+      await api.delete(`/mainproduct/delete-product/${id}`);
+      setProducts((current) => current.filter((item) => item._id !== id));
+      setNotice(t("product.deleted"));
+    } catch (caught) {
+      setError(apiMessage(caught));
+    }
   };
 
   const startEdit = (product) => {
     setError("");
+    setNotice("");
     setEditing(product._id);
-    setForm({ title: product.title || "", description: product.description || "", price: product.price || "", discountPrice: product.discountPrice ?? product.diccountprice ?? "", offer: product.offer || "", sku: product.sku || "", images: [] });
+    setForm({
+      title: product.title || "",
+      description: product.description || "",
+      price: product.price ?? "",
+      discountPrice: product.discountPrice ?? product.diccountprice ?? "",
+      offer: product.offer || "",
+      sku: product.sku || "",
+      images: [],
+    });
   };
 
   const saveEdit = async (event) => {
     event.preventDefault();
     const data = new FormData();
-    data.append("title", form.title);
-    data.append("description", form.description);
-    data.append("price", form.price);
-    data.append("discountPrice", form.discountPrice);
-    data.append("offer", form.offer);
-    data.append("sku", form.sku);
+    Object.entries(form).forEach(([key, value]) => {
+      if (key !== "images") data.append(key, value);
+    });
     form.images.forEach((image) => data.append("images", image));
+
     try {
-      const response = await axios.patch(`${import.meta.env.VITE_API_URL}/mainproduct/update-product/${editing}`, data, { withCredentials: true });
-      setCategories((current) => current.map((item) => item._id === editing ? response.data.data : item));
+      const response = await api.patch(`/mainproduct/update-product/${editing}`, data);
+      setProducts((current) => current.map((item) => (item._id === editing ? { ...item, ...response.data.data } : item)));
       setEditing(null);
-    } catch (requestError) {
-      setError(requestError.response?.data?.message || "Unable to update product");
+      setNotice(t("product.updated"));
+    } catch (caught) {
+      setError(apiMessage(caught));
     }
   };
+
+  const visible = (products || []).filter((product) =>
+    !search || product.title?.toLowerCase().includes(search) || product.sku?.toLowerCase().includes(search)
+  );
+
   return (
-    <>
-    <div className="min-h-screen bg-[#062B63]/95 p-6">
-      <h2 className="text-2xl font-bold text-white mb-6">
-        All product
-      </h2>
-      {error && <p className="mb-4 text-red-200">{error}</p>}
+    <PageShell title={t("product.allTitle")}>
+      <ErrorNote message={error} />
+      <SuccessNote message={notice} />
 
-      <div className="grid md:grid-cols-3 gap-6">
+      {products === null ? (
+        <p className="text-white/70">{t("common.loading")}</p>
+      ) : visible.length ? (
+        <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
+          {visible.map((product) => (
+            <article key={product._id} className="rounded-xl bg-white/10 p-4 shadow-lg">
+              <img src={product.image?.[0]} alt={product.title} className="h-40 w-full rounded-lg bg-white/5 object-cover" />
 
-        {categories.map((category) => (
-          <div
-            key={category._id}
-            className="bg-white/10 backdrop-blur-lg rounded-xl p-4 shadow-lg hover:scale-105 transition"
-          >
-            {/* Image */}
-            <img
-              src={category.image?.[0] || category.image}
-              alt={category.title}
-              className="w-full h-40 object-cover rounded-lg"
-            />
+              {editing === product._id ? (
+                <form onSubmit={saveEdit} className="mt-3 space-y-2">
+                  <Field label={t("product.name")} htmlFor={`edit-title-${product._id}`}>
+                    <input id={`edit-title-${product._id}`} required value={form.title} onChange={(event) => setForm({ ...form, title: event.target.value })} className={`${inputClass} !p-2`} />
+                  </Field>
+                  <Field label={t("product.description")} htmlFor={`edit-description-${product._id}`}>
+                    <textarea id={`edit-description-${product._id}`} required rows={3} value={form.description} onChange={(event) => setForm({ ...form, description: event.target.value })} className={`${inputClass} !p-2`} />
+                  </Field>
+                  <Field label={t("product.price")} htmlFor={`edit-price-${product._id}`}>
+                    <input id={`edit-price-${product._id}`} required type="number" min="0" value={form.price} onChange={(event) => setForm({ ...form, price: event.target.value })} className={`${inputClass} !p-2`} />
+                  </Field>
+                  <Field label={t("product.offerPrice")} htmlFor={`edit-discount-${product._id}`}>
+                    <input id={`edit-discount-${product._id}`} type="number" min="0" max={form.price || undefined} value={form.discountPrice} onChange={(event) => setForm({ ...form, discountPrice: event.target.value })} className={`${inputClass} !p-2`} />
+                  </Field>
+                  <Field label={t("product.offerLabel")} htmlFor={`edit-offer-${product._id}`}>
+                    <input id={`edit-offer-${product._id}`} value={form.offer} onChange={(event) => setForm({ ...form, offer: event.target.value })} className={`${inputClass} !p-2`} />
+                  </Field>
+                  <Field label={t("product.sku")} htmlFor={`edit-sku-${product._id}`}>
+                    <input id={`edit-sku-${product._id}`} value={form.sku} onChange={(event) => setForm({ ...form, sku: event.target.value })} className={`${inputClass} !p-2`} />
+                  </Field>
+                  <Field label={t("product.images")} htmlFor={`edit-images-${product._id}`}>
+                    <input
+                      id={`edit-images-${product._id}`}
+                      type="file"
+                      accept="image/png,image/jpeg,image/webp"
+                      multiple
+                      onChange={(event) => setForm({ ...form, images: Array.from(event.target.files || []) })}
+                      className="w-full text-sm text-white"
+                    />
+                  </Field>
+                  <div className="flex gap-2">
+                    <button type="submit" className="flex-1 rounded bg-green-500 py-2 text-white">{t("common.save")}</button>
+                    <button type="button" onClick={() => setEditing(null)} className="flex-1 rounded bg-white/20 py-2 text-white">{t("common.cancel")}</button>
+                  </div>
+                </form>
+              ) : (
+                <>
+                  <h2 className="mt-3 truncate text-lg font-semibold">{product.title}</h2>
+                  <dl className="mt-2 space-y-1 text-sm text-white/70">
+                    <div className="flex justify-between gap-2">
+                      <dt>{t("product.sku")}</dt>
+                      <dd className="truncate">{product.sku || product.slug}</dd>
+                    </div>
+                    <div className="flex justify-between gap-2">
+                      <dt>{t("product.price")}</dt>
+                      <dd>{formatPrice(product.price)}</dd>
+                    </div>
+                    <div className="flex justify-between gap-2">
+                      <dt>{t("product.offerPrice")}</dt>
+                      <dd>
+                        {product.discountPrice ?? product.diccountprice ? formatPrice(product.discountPrice ?? product.diccountprice) : "—"}
+                        {product.offer ? ` (${product.offer})` : ""}
+                      </dd>
+                    </div>
+                    <div className="flex justify-between gap-2">
+                      <dt>{t("product.category")}</dt>
+                      <dd className="truncate">{product.category?.name || "—"}</dd>
+                    </div>
+                  </dl>
 
-            {editing === category._id ? <form onSubmit={saveEdit} className="mt-3 space-y-2">
-              <input value={form.title} onChange={(event) => setForm({ ...form, title: event.target.value })} className="w-full rounded bg-white/20 p-2 text-white" placeholder="Title" required />
-              <textarea value={form.description} onChange={(event) => setForm({ ...form, description: event.target.value })} className="w-full rounded bg-white/20 p-2 text-white" placeholder="Description" required />
-              <input type="number" value={form.price} onChange={(event) => setForm({ ...form, price: event.target.value })} className="w-full rounded bg-white/20 p-2 text-white" placeholder="Price" required />
-              <input type="number" min="0" max={form.price || undefined} value={form.discountPrice} onChange={(event) => setForm({ ...form, discountPrice: event.target.value })} className="w-full rounded bg-white/20 p-2 text-white" placeholder="Offer price (optional)" />
-              <input value={form.offer} onChange={(event) => setForm({ ...form, offer: event.target.value })} className="w-full rounded bg-white/20 p-2 text-white" placeholder="Offer label (optional)" />
-              <input value={form.sku} onChange={(event) => setForm({ ...form, sku: event.target.value })} className="w-full rounded bg-white/20 p-2 text-white" placeholder="SKU" />
-              <input type="file" multiple onChange={(event) => setForm({ ...form, images: Array.from(event.target.files || []) })} className="w-full text-sm text-white" />
-              <div className="flex gap-2"><button type="submit" className="flex-1 rounded bg-green-500 py-2 text-white">Save</button><button type="button" onClick={() => setEditing(null)} className="flex-1 rounded bg-white/20 py-2 text-white">Cancel</button></div>
-            </form> : <>
-            {/* Info */}
-            <div className="mt-3 space-y-1 flex items-center gap-2">
-              <h3>title :</h3>
-              <p className="text-gray-300 text-sm truncate">
-                {category.title}
-              </p>
-              
-            </div>
-            <div className="mt-3 space-y-1 flex items-center gap-2">
-              <h3>SKU :</h3>
-              <p className="text-gray-300 text-sm truncate">
-                {category.sku || category.slug}
-              </p>
-              
-            </div>
-            <div className="mt-3 space-y-1 flex items-center gap-2">
-              <h3>price :</h3>
-              <p className="text-gray-300 text-sm truncate">
-                BDT {category.price || 0}
-              </p>
-            </div>
-            <div className="mt-3 space-y-1 flex items-center gap-2">
-              <h3>offer :</h3>
-              <p className="text-gray-300 text-sm truncate">
-                {category.discountPrice ?? category.diccountprice ?? "—"} {category.offer ? `(${category.offer})` : ""}
-              </p>
-            </div>
-
-            {/* Actions */}
-            <div className="flex gap-2 mt-4">
-              <button onClick={() => startEdit(category)} className="flex-1 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg text-sm">Edit</button>
-              <button
-                onClick={() => window.open(category.image?.[0] || category.image, "_blank")}
-                className="flex-1 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg text-sm"
-              >
-                Visit
-              </button>
-
-              <button
-                onClick={() => handleDelete(category._id)}
-                className="flex-1 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg text-sm"
-              >
-                Delete
-              </button>
-            </div>
-            </>}
-          </div>
-        ))}
-
-      </div>
-    </div>
-    </>
-  )
+                  <div className="mt-4 flex gap-2">
+                    <button onClick={() => startEdit(product)} className="flex-1 rounded-lg bg-blue-500 py-2 text-sm text-white transition hover:bg-blue-400">
+                      {t("common.edit")}
+                    </button>
+                    <button onClick={() => remove(product._id)} className="flex-1 rounded-lg bg-red-500 py-2 text-sm text-white transition hover:bg-red-400">
+                      {t("common.delete")}
+                    </button>
+                  </div>
+                </>
+              )}
+            </article>
+          ))}
+        </div>
+      ) : (
+        <EmptyNote message={t("product.none")} />
+      )}
+    </PageShell>
+  );
 }
-
-export default All_product

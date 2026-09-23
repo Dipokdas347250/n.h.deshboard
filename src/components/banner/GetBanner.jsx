@@ -1,101 +1,129 @@
-import axios from "axios";
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { api } from "../../lib/api";
+import { useLanguage } from "../../i18n/useLanguage";
+import { PageShell, ErrorNote, SuccessNote, EmptyNote, Field, inputClass } from "../common/PageShell";
 
-const GetBanner = () => {
-  const [banners, setBanners] = useState([]);
-  const [error, setError] = useState("");
+const FIELDS = [
+  ["title", "banner.heading"],
+  ["titleBn", "banner.headingBn"],
+  ["subtitle", "banner.subtitle"],
+  ["subtitleBn", "banner.subtitleBn"],
+  ["description", "banner.description"],
+  ["descriptionBn", "banner.descriptionBn"],
+  ["buttonLabel", "banner.buttonLabel"],
+  ["buttonLabelBn", "banner.buttonLabelBn"],
+  ["url", "banner.url"],
+];
+
+export default function GetBanner() {
+  const { t, apiMessage, pick } = useLanguage();
+  const [banners, setBanners] = useState(null);
   const [editing, setEditing] = useState(null);
-  const [url, setUrl] = useState("");
+  const [form, setForm] = useState({});
+  const [error, setError] = useState("");
+  const [notice, setNotice] = useState("");
 
   useEffect(() => {
-   axios.get(`${import.meta.env.VITE_API_URL}/banner/all-banner`, { withCredentials: true })
-      .then((response) => {
-        setBanners(response.data.data);
-        
-      })
-      .catch((error) => {
-        console.error("Error fetching banners:", error);
-      });
-  }, []);
+    let active = true;
 
-  const handleDelete = async (id) => {
+    api.get("/banner/all-banner")
+      .then((response) => {
+        if (active) setBanners(response.data.data || []);
+      })
+      .catch((caught) => {
+        if (!active) return;
+        setBanners([]);
+        setError(apiMessage(caught));
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [apiMessage]);
+
+  const remove = async (id) => {
+    if (!window.confirm(t("common.confirmDelete"))) return;
     try {
       await api.delete(`/banner/delete-banner/${id}`);
       setBanners((current) => current.filter((item) => item._id !== id));
-    } catch (requestError) {
-      setError(requestError.response?.data?.message || "Unable to delete banner");
+      setNotice(t("banner.deleted"));
+    } catch (caught) {
+      setError(apiMessage(caught));
     }
+  };
+
+  const startEdit = (banner) => {
+    setError("");
+    setNotice("");
+    setEditing(banner._id);
+    setForm(Object.fromEntries(FIELDS.map(([key]) => [key, banner[key] || ""])));
   };
 
   const saveEdit = async (event) => {
     event.preventDefault();
     try {
-      const response = await api.patch("/banner/update-banner", { id: editing, url });
-      setBanners((current) => current.map((item) => item._id === editing ? response.data.data : item));
+      const response = await api.patch(`/banner/update-banner/${editing}`, form);
+      setBanners((current) => current.map((item) => (item._id === editing ? response.data.data : item)));
       setEditing(null);
-    } catch (requestError) {
-      setError(requestError.response?.data?.message || "Unable to update banner");
+      setNotice(t("banner.updated"));
+    } catch (caught) {
+      setError(apiMessage(caught));
     }
   };
 
   return (
-    <div className="min-h-screen bg-[#062B63]/95 p-6">
-      <h2 className="text-2xl font-bold text-white mb-6">
-        All Banners
-      </h2>
-      {error && <p className="mb-4 text-red-200">{error}</p>}
+    <PageShell title={t("banner.allTitle")}>
+      <ErrorNote message={error} />
+      <SuccessNote message={notice} />
 
-      <div className="grid md:grid-cols-3 gap-6">
+      {banners === null ? (
+        <p className="text-white/70">{t("common.loading")}</p>
+      ) : banners.length ? (
+        <div className="grid gap-6 md:grid-cols-2">
+          {banners.map((banner) => (
+            <article key={banner._id} className="rounded-xl bg-white/10 p-4 shadow-lg">
+              <img src={banner.image} alt={banner.title || ""} className="h-44 w-full rounded-lg bg-white/5 object-cover" />
 
-        {banners.map((banner) => (
-          <div
-            key={banner._id}
-            className="bg-white/10 backdrop-blur-lg rounded-xl p-4 shadow-lg hover:scale-105 transition"
-          >
-            {/* Image */}
-            <img
-              src={banner.image}
-              alt="banner"
-              className="w-full h-40 object-cover rounded-lg"
-            />
+              {editing === banner._id ? (
+                <form onSubmit={saveEdit} className="mt-3 space-y-2">
+                  {FIELDS.map(([key, labelKey]) => (
+                    <Field key={key} label={t(labelKey)} htmlFor={`banner-${key}-${banner._id}`}>
+                      <input
+                        id={`banner-${key}-${banner._id}`}
+                        value={form[key] ?? ""}
+                        onChange={(event) => setForm({ ...form, [key]: event.target.value })}
+                        className={`${inputClass} !p-2`}
+                      />
+                    </Field>
+                  ))}
+                  <div className="flex gap-2">
+                    <button type="submit" className="flex-1 rounded bg-green-500 py-2 text-white">{t("common.save")}</button>
+                    <button type="button" onClick={() => setEditing(null)} className="flex-1 rounded bg-white/20 py-2 text-white">{t("common.cancel")}</button>
+                  </div>
+                </form>
+              ) : (
+                <>
+                  <h2 className="mt-3 text-lg font-semibold">{pick(banner.title, banner.titleBn) || "—"}</h2>
+                  <p className="mt-1 text-sm text-white/70">{pick(banner.subtitle, banner.subtitleBn)}</p>
+                  <p className="mt-2 line-clamp-2 text-sm text-white/60">{pick(banner.description, banner.descriptionBn)}</p>
+                  <p className="mt-2 truncate font-mono text-xs text-white/50">{banner.url || "—"}</p>
 
-            {editing === banner._id ? <form onSubmit={saveEdit} className="mt-3 space-y-2">
-              <input value={url} onChange={(event) => setUrl(event.target.value)} className="w-full rounded bg-white/20 p-2 text-white" placeholder="Redirect URL" />
-              <div className="flex gap-2"><button type="submit" className="flex-1 rounded bg-green-500 py-2 text-white">Save</button><button type="button" onClick={() => setEditing(null)} className="flex-1 rounded bg-white/20 py-2 text-white">Cancel</button></div>
-            </form> : <>
-            {/* Info */}
-            <div className="mt-3 space-y-1">
-              <p className="text-gray-300 text-sm truncate">
-                {banner.url}
-              </p>
-              
-            </div>
-
-            {/* Actions */}
-            <div className="flex gap-2 mt-4">
-              <button onClick={() => { setEditing(banner._id); setUrl(banner.url || ""); }} className="flex-1 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg text-sm">Edit</button>
-              <button
-                onClick={() => window.open(banner.url)}
-                className="flex-1 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg text-sm"
-              >
-                Visit
-              </button>
-
-              <button
-                onClick={() => handleDelete(banner._id)}
-                className="flex-1 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg text-sm"
-              >
-                Delete
-              </button>
-            </div>
-            </>}
-          </div>
-        ))}
-
-      </div>
-    </div>
+                  <div className="mt-4 flex gap-2">
+                    <button onClick={() => startEdit(banner)} className="flex-1 rounded-lg bg-blue-500 py-2 text-sm text-white transition hover:bg-blue-400">
+                      {t("common.edit")}
+                    </button>
+                    <button onClick={() => remove(banner._id)} className="flex-1 rounded-lg bg-red-500 py-2 text-sm text-white transition hover:bg-red-400">
+                      {t("common.delete")}
+                    </button>
+                  </div>
+                </>
+              )}
+            </article>
+          ))}
+        </div>
+      ) : (
+        <EmptyNote message={t("banner.none")} />
+      )}
+    </PageShell>
   );
-};
-
-export default GetBanner;
+}

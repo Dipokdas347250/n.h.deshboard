@@ -1,112 +1,77 @@
-import axios from "axios";
-import React, { useState } from "react";
+import { useState } from "react";
+import { api } from "../../lib/api";
+import { useLanguage } from "../../i18n/useLanguage";
+import { PageShell, ErrorNote, SuccessNote, Field, inputClass } from "../common/PageShell";
 
-const AddCategory = () => {
+export default function AddCategory() {
+  const { t, apiMessage } = useLanguage();
   const [name, setName] = useState("");
-  const [discount, setDiscount] = useState("");
+  const [discount, setDiscount] = useState("0");
   const [image, setImage] = useState(null);
+  const [error, setError] = useState("");
+  const [notice, setNotice] = useState("");
+  const [busy, setBusy] = useState(false);
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  const submit = async (event) => {
+    event.preventDefault();
+    setBusy(true);
+    setError("");
+    setNotice("");
 
-    const formData = new FormData();
-    formData.append("name", name); 
-    formData.append("discount", discount);
-    formData.append("image", image);
+    const data = new FormData();
+    data.append("name", name);
+    data.append("discount", discount);
+    data.append("image", image);
 
     try {
-      const res = await axios.post(
-        `${import.meta.env.VITE_API_URL}/products/allproducts`,
-        formData,
-        {
-          withCredentials: true,
-          headers: {
-            "Content-Type": "multipart/form-data",
-          },
-        }
-      );
-
-      console.log("Success:", res.data);
+      await api.post("/products/allproducts", data);
       setName("");
-      setDiscount("");
+      setDiscount("0");
       setImage(null);
-
-    } catch (error) {
-      console.error("Error:", error);
+      setNotice(t("category.created"));
+    } catch (caught) {
+      setError(apiMessage(caught));
+    } finally {
+      setBusy(false);
     }
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-[#062B63]/95 p-6">
-      <div className="w-full max-w-xl bg-white/10 backdrop-blur-lg rounded-2xl shadow-xl p-8">
+    <PageShell title={t("category.addTitle")}>
+      <ErrorNote message={error} />
+      <SuccessNote message={notice} />
 
-        <h2 className="text-2xl font-bold text-white mb-6 text-center">
-          Add Category
-        </h2>
+      <form onSubmit={submit} className="max-w-xl space-y-4 rounded-2xl bg-white/10 p-6">
+        <Field label={t("category.name")} htmlFor="category-name">
+          <input id="category-name" required value={name} onChange={(event) => setName(event.target.value)} placeholder={t("category.namePlaceholder")} className={inputClass} />
+        </Field>
 
-        <form onSubmit={handleSubmit} className="space-y-5">
+        <Field label={t("category.discount")} htmlFor="category-discount">
+          <input id="category-discount" type="number" min="0" max="100" value={discount} onChange={(event) => setDiscount(event.target.value)} className={inputClass} />
+        </Field>
 
+        <Field label={t("common.uploadImage")} htmlFor="category-image">
+          <input
+            id="category-image"
+            required
+            type="file"
+            accept="image/png,image/jpeg,image/webp"
+            onChange={(event) => setImage(event.target.files?.[0] || null)}
+            className="w-full cursor-pointer rounded-lg bg-white/15 p-2 text-white file:mr-3 file:rounded-md file:border-none file:bg-green-500 file:px-4 file:py-2 file:text-white"
+          />
+        </Field>
+
+        {image && (
           <div>
-            <label className="block text-gray-300 mb-2">
-              Category Name
-            </label>
-            <input
-              type="text"
-              placeholder="Enter category name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              className="w-full p-3 rounded-lg bg-white/20 text-white outline-none"
-              required
-            />
+            <p className="mb-2 text-sm text-white/60">{t("common.preview")}</p>
+            <img src={URL.createObjectURL(image)} alt="" className="h-40 w-full rounded-lg object-cover" />
           </div>
-          <div>
-            <label className="block text-gray-300 mb-2">
-             discount
-            </label>
-            <input
-              type="text"
-              placeholder="Enter discount"
-              value={discount}
-              onChange={(e) => setDiscount(e.target.value)}
-              className="w-full p-3 rounded-lg bg-white/20 text-white outline-none"
-              required
-            />
-          </div>
+        )}
 
-          <div >
-            <label className="block text-gray-300 mb-2">
-              Upload Image
-            </label>
-            <input
-              type="file"
-              onChange={(e) => setImage(e.target.files[0])}
-              className="w-full p-2 rounded-lg bg-white/20 text-white file:bg-green-500 file:border-none file:px-4 file:py-2 file:rounded-md cursor-pointer"
-              required
-            />
-          </div>
-
-          {image && (
-            <div>
-              <p className="text-gray-300 mb-2">Preview:</p>
-              <img
-                src={URL.createObjectURL(image)}
-                alt="preview"
-                className="w-full h-40 object-cover rounded-lg"
-              />
-            </div>
-          )}
-
-          <button
-            type="submit"
-            className="w-full py-3 bg-green-500 hover:bg-green-600 text-white rounded-lg font-semibold transition cursor-pointer"
-          >
-            Add Category
-          </button>
-
-        </form>
-      </div>
-    </div>
+        <button disabled={busy} className="w-full rounded-lg bg-green-500 py-3 font-semibold text-white transition hover:bg-green-400 disabled:opacity-50">
+          {busy ? t("common.saving") : t("category.addTitle")}
+        </button>
+      </form>
+    </PageShell>
   );
-};
-
-export default AddCategory;
+}

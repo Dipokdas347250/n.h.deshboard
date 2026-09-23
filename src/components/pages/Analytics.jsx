@@ -1,9 +1,67 @@
 import { useEffect, useState } from "react";
-import { api, getErrorMessage } from "../../lib/api";
+import { api } from "../../lib/api";
+import { useLanguage } from "../../i18n/useLanguage";
+import { PageShell, ErrorNote, EmptyNote } from "../common/PageShell";
 
 export default function Analytics() {
-  const [data, setData] = useState({ visits: 0, uniqueVisitors: 0, topPaths: [] });
+  const { t, apiMessage, formatNumber } = useLanguage();
+  const [data, setData] = useState(null);
   const [error, setError] = useState("");
-  useEffect(() => { api.get("/admin/analytics").then((response) => setData(response.data.data || {})).catch((err) => setError(getErrorMessage(err))); }, []);
-  return <section className="min-h-screen bg-[#064e3b]/90 p-6 text-white"><h1 className="mb-6 text-2xl font-bold">Analytics</h1>{error && <p className="mb-4 rounded bg-red-500/20 p-3 text-red-200">{error}</p>}<div className="mb-8 grid gap-4 sm:grid-cols-2"><div className="rounded-xl bg-white/10 p-5"><p className="text-sm text-gray-300">Total visits</p><p className="mt-2 text-3xl font-bold">{data.visits}</p></div><div className="rounded-xl bg-white/10 p-5"><p className="text-sm text-gray-300">Unique visitors</p><p className="mt-2 text-3xl font-bold">{data.uniqueVisitors}</p></div></div><div className="rounded-xl bg-white/10 p-5"><h2 className="mb-4 text-lg font-semibold">Most visited pages</h2>{data.topPaths.map((item) => <div key={item.path} className="flex justify-between border-b border-white/10 py-3"><span>{item.path}</span><span>{item.visitors} visitors / {item.visits} visits</span></div>)}</div></section>;
+
+  useEffect(() => {
+    let active = true;
+
+    api.get("/admin/analytics")
+      .then((response) => {
+        if (active) setData(response.data.data || { visits: 0, uniqueVisitors: 0, topPaths: [] });
+      })
+      .catch((caught) => {
+        if (!active) return;
+        setData({ visits: 0, uniqueVisitors: 0, topPaths: [] });
+        setError(apiMessage(caught));
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [apiMessage]);
+
+  return (
+    <PageShell title={t("analytics.title")}>
+      <ErrorNote message={error} />
+
+      {data === null ? (
+        <p className="text-white/70">{t("common.loading")}</p>
+      ) : (
+        <>
+          <div className="mb-8 grid gap-4 sm:grid-cols-2">
+            <div className="rounded-xl bg-white/10 p-5">
+              <h2 className="text-sm text-white/60">{t("analytics.visits")}</h2>
+              <p className="mt-2 text-3xl font-bold">{formatNumber(data.visits)}</p>
+            </div>
+            <div className="rounded-xl bg-white/10 p-5">
+              <h2 className="text-sm text-white/60">{t("analytics.uniqueVisitors")}</h2>
+              <p className="mt-2 text-3xl font-bold">{formatNumber(data.uniqueVisitors)}</p>
+            </div>
+          </div>
+
+          <div className="rounded-xl bg-white/10 p-5">
+            <h2 className="mb-4 text-lg font-semibold">{t("analytics.topPages")}</h2>
+            {data.topPaths?.length ? (
+              data.topPaths.map((item) => (
+                <div key={item.path} className="flex flex-wrap justify-between gap-2 border-b border-white/10 py-3 last:border-0">
+                  <span className="font-mono text-sm">{item.path}</span>
+                  <span className="text-sm text-white/70">
+                    {t("analytics.visitorsVisits", { visitors: formatNumber(item.visitors), visits: formatNumber(item.visits) })}
+                  </span>
+                </div>
+              ))
+            ) : (
+              <EmptyNote message={t("common.none")} />
+            )}
+          </div>
+        </>
+      )}
+    </PageShell>
+  );
 }

@@ -1,104 +1,162 @@
 import { useEffect, useState } from "react";
-import axios from "axios";
 import { Link, useNavigate } from "react-router";
+import { api } from "../../lib/api";
+import { useLanguage } from "../../i18n/useLanguage";
+import AuthShell from "./AuthShell";
+import { Field, inputClass } from "../common/PageShell";
 
-const initialForm = { fullname: "", email: "", password: "", confirmPassword: "", phone: "", address: "" };
+const EMPTY = { fullname: "", email: "", phone: "", address: "", password: "", confirmPassword: "" };
 
+/**
+ * Creates the first dashboard administrator and walks them through email
+ * verification. The API refuses a second administrator, so after the first
+ * account exists further staff are added by an administrator instead.
+ */
 export default function Register() {
   const navigate = useNavigate();
-  const [form, setForm] = useState(initialForm);
-  const [otp, setOtp] = useState("");
+  const { t, apiMessage } = useLanguage();
   const [step, setStep] = useState("register");
+  const [form, setForm] = useState(EMPTY);
+  const [otp, setOtp] = useState("");
+  const [status, setStatus] = useState(null);
+  const [busy, setBusy] = useState(false);
   const [resendIn, setResendIn] = useState(0);
-  const [status, setStatus] = useState({ type: "", message: "" });
-  const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+    if (!resendIn) return undefined;
+    const timer = setInterval(() => setResendIn((value) => Math.max(value - 1, 0)), 1000);
+    return () => clearInterval(timer);
+  }, [resendIn]);
 
   const change = (event) => setForm((current) => ({ ...current, [event.target.name]: event.target.value }));
 
   const submit = async (event) => {
     event.preventDefault();
-    if (form.password.length < 8) return setStatus({ type: "error", message: "Password must be at least 8 characters." });
-    if (form.password !== form.confirmPassword) return setStatus({ type: "error", message: "Passwords do not match." });
+    if (form.password.length < 8) {
+      setStatus({ type: "error", message: t("auth.passwordLength") });
+      return;
+    }
+    if (form.password !== form.confirmPassword) {
+      setStatus({ type: "error", message: t("auth.passwordsDoNotMatch") });
+      return;
+    }
 
-    setSubmitting(true);
-    setStatus({ type: "", message: "" });
+    setBusy(true);
+    setStatus(null);
     try {
-      await axios.post(`${import.meta.env.VITE_API_URL}/auth/dashboard-signup`, {
+      await api.post("/auth/dashboard-signup", {
         fullname: form.fullname,
         email: form.email,
-        password: form.password,
         phone: form.phone,
         address: form.address,
-      }, { withCredentials: true });
+        password: form.password,
+      });
       setStep("verify");
       setResendIn(60);
-      setStatus({ type: "success", message: "A verification code was sent to your email." });
-    } catch (error) {
-      setStatus({ type: "error", message: error.response?.data?.message || "Unable to register." });
+      setStatus({ type: "success", message: t("auth.registered") });
+    } catch (caught) {
+      setStatus({ type: "error", message: apiMessage(caught) });
     } finally {
-      setSubmitting(false);
+      setBusy(false);
     }
   };
 
   const verify = async (event) => {
     event.preventDefault();
-    setSubmitting(true);
-    setStatus({ type: "", message: "" });
+    setBusy(true);
+    setStatus(null);
     try {
-      await axios.post(`${import.meta.env.VITE_API_URL}/auth/verifyotp`, { email: form.email, otp }, { withCredentials: true });
-      setStatus({ type: "success", message: "Email verified. Redirecting to login..." });
+      await api.post("/auth/verifyotp", { email: form.email, otp });
+      setStatus({ type: "success", message: t("auth.verified") });
       setTimeout(() => navigate("/login"), 900);
-    } catch (error) {
-      setStatus({ type: "error", message: error.response?.data?.message || "Invalid verification code." });
+    } catch (caught) {
+      setStatus({ type: "error", message: apiMessage(caught) });
     } finally {
-      setSubmitting(false);
+      setBusy(false);
     }
   };
 
   const resend = async () => {
     if (resendIn) return;
-    setSubmitting(true);
+    setBusy(true);
     try {
-      await axios.post(`${import.meta.env.VITE_API_URL}/auth/resendotp`, { email: form.email }, { withCredentials: true });
+      await api.post("/auth/resendotp", { email: form.email });
       setResendIn(60);
-      setStatus({ type: "success", message: "A new verification code was sent." });
-    } catch (error) {
-      setStatus({ type: "error", message: error.response?.data?.message || "Unable to resend code." });
+      setStatus({ type: "success", message: t("auth.codeSent") });
+    } catch (caught) {
+      setStatus({ type: "error", message: apiMessage(caught) });
     } finally {
-      setSubmitting(false);
+      setBusy(false);
     }
   };
 
-  useEffect(() => {
-    if (!resendIn) return undefined;
-    const timer = setInterval(() => setResendIn((current) => Math.max(current - 1, 0)), 1000);
-    return () => clearInterval(timer);
-  }, [resendIn]);
+  const note = status && (
+    <p className={`rounded-lg p-3 text-sm ${status.type === "error" ? "bg-red-500/20 text-red-100" : "bg-green-500/20 text-green-100"}`}>
+      {status.message}
+    </p>
+  );
 
-  if (step === "verify") return <AuthShell title="Verify your email" subtitle={`Enter the code sent to ${form.email}.`}>
-    <form onSubmit={verify} className="space-y-4">
-      <input required inputMode="text" autoCapitalize="characters" pattern="[A-Za-z0-9]{4,8}" value={otp} onChange={(event) => setOtp(event.target.value.replace(/[^A-Za-z0-9]/g, "").slice(0, 8).toUpperCase())} placeholder="Verification code" className="w-full rounded-lg bg-white/20 p-4 text-center text-2xl tracking-[0.4em] outline-none" />
-      {status.message && <p className={status.type === "error" ? "text-red-300" : "text-green-300"}>{status.message}</p>}
-      <button disabled={submitting} className="w-full rounded-full bg-green-500 px-6 py-4 font-semibold hover:bg-green-400 disabled:opacity-50">{submitting ? "Verifying..." : "Verify email"}</button>
-      <button type="button" disabled={submitting || resendIn > 0} onClick={resend} className="w-full rounded-full border border-white/30 px-6 py-3 disabled:opacity-50">{resendIn ? `Resend code in ${resendIn}s` : "Resend code"}</button>
-      <button type="button" onClick={() => setStep("register")} className="w-full text-sm text-white/70 hover:text-white">Back to registration</button>
-    </form>
-  </AuthShell>;
+  if (step === "verify") {
+    return (
+      <AuthShell title={t("auth.verifyTitle")} subtitle={t("auth.verifySubtitle", { email: form.email })}>
+        <form onSubmit={verify} className="space-y-4">
+          <input
+            required
+            value={otp}
+            onChange={(event) => setOtp(event.target.value.replace(/[^A-Za-z0-9]/g, "").slice(0, 8).toUpperCase())}
+            placeholder={t("auth.code")}
+            aria-label={t("auth.code")}
+            className={`${inputClass} text-center text-2xl tracking-[0.4em]`}
+          />
+          {note}
+          <button disabled={busy} className="w-full rounded-full bg-green-500 px-6 py-4 font-semibold hover:bg-green-400 disabled:opacity-50">
+            {busy ? t("auth.verifying") : t("auth.verify")}
+          </button>
+          <button type="button" disabled={busy || resendIn > 0} onClick={resend} className="w-full rounded-full border border-white/30 px-6 py-3 disabled:opacity-50">
+            {resendIn ? t("auth.resendIn", { seconds: resendIn }) : t("auth.resend")}
+          </button>
+          <button type="button" onClick={() => setStep("register")} className="w-full text-sm text-white/70 hover:text-white">
+            {t("auth.backToRegister")}
+          </button>
+        </form>
+      </AuthShell>
+    );
+  }
 
-  return <AuthShell title="Create dashboard account" subtitle="Register and verify your email before signing in.">
-    <form onSubmit={submit} className="space-y-3">
-      <input required name="fullname" value={form.fullname} onChange={change} placeholder="Full name" className="w-full rounded-lg bg-white/20 p-4 outline-none" />
-      <input required type="email" name="email" value={form.email} onChange={change} placeholder="Email" className="w-full rounded-lg bg-white/20 p-4 outline-none" />
-      <div className="grid grid-cols-2 gap-3"><input name="phone" value={form.phone} onChange={change} placeholder="Phone" className="w-full rounded-lg bg-white/20 p-4 outline-none" /><input name="address" value={form.address} onChange={change} placeholder="Address" className="w-full rounded-lg bg-white/20 p-4 outline-none" /></div>
-      <input required type="password" name="password" value={form.password} onChange={change} placeholder="Password" className="w-full rounded-lg bg-white/20 p-4 outline-none" />
-      <input required type="password" name="confirmPassword" value={form.confirmPassword} onChange={change} placeholder="Confirm password" className="w-full rounded-lg bg-white/20 p-4 outline-none" />
-      {status.message && <p className={status.type === "error" ? "text-red-300" : "text-green-300"}>{status.message}</p>}
-      <button disabled={submitting} className="w-full rounded-full bg-green-500 px-6 py-4 font-semibold transition hover:bg-green-400 disabled:opacity-50">{submitting ? "Creating account..." : "Register"}</button>
-      <p className="text-center text-sm text-white/70">Already registered? <Link to="/login" className="font-semibold text-green-300 hover:underline">Sign in</Link></p>
-    </form>
-  </AuthShell>;
-}
-
-export function AuthShell({ title, subtitle, children }) {
-  return <div className="flex min-h-screen items-center justify-center bg-linear-to-br from-[#062B63] to-[#1255A4] p-6 text-white"><div className="w-full max-w-xl rounded-3xl border border-white/20 bg-white/10 p-8 shadow-[0_0_60px_rgba(22,134,61,0.3)] backdrop-blur-xl"><h2 className="text-center text-3xl font-bold">{title}</h2><p className="mb-8 mt-2 text-center text-white/70">{subtitle}</p>{children}</div></div>;
+  return (
+    <AuthShell title={t("auth.registerTitle")} subtitle={t("auth.registerSubtitle")}>
+      <form onSubmit={submit} className="space-y-3">
+        <Field label={t("auth.fullname")} htmlFor="register-name">
+          <input id="register-name" required name="fullname" value={form.fullname} onChange={change} className={inputClass} />
+        </Field>
+        <Field label={t("auth.email")} htmlFor="register-email">
+          <input id="register-email" required type="email" name="email" value={form.email} onChange={change} className={inputClass} />
+        </Field>
+        <div className="grid grid-cols-2 gap-3">
+          <Field label={t("auth.phone")} htmlFor="register-phone">
+            <input id="register-phone" name="phone" value={form.phone} onChange={change} className={inputClass} />
+          </Field>
+          <Field label={t("auth.address")} htmlFor="register-address">
+            <input id="register-address" name="address" value={form.address} onChange={change} className={inputClass} />
+          </Field>
+        </div>
+        <Field label={t("auth.password")} htmlFor="register-password">
+          <input id="register-password" required type="password" minLength={8} name="password" value={form.password} onChange={change} className={inputClass} />
+        </Field>
+        <Field label={t("auth.confirmPassword")} htmlFor="register-confirm">
+          <input id="register-confirm" required type="password" minLength={8} name="confirmPassword" value={form.confirmPassword} onChange={change} className={inputClass} />
+        </Field>
+        {note}
+        <button disabled={busy} className="w-full rounded-full bg-green-500 px-6 py-4 font-semibold transition hover:bg-green-400 disabled:opacity-50">
+          {busy ? t("auth.creating") : t("auth.register")}
+        </button>
+        <p className="text-center text-sm text-white/70">
+          {t("auth.haveAccount")}{" "}
+          <Link to="/login" className="font-semibold text-green-300 hover:underline">
+            {t("auth.login")}
+          </Link>
+        </p>
+      </form>
+    </AuthShell>
+  );
 }

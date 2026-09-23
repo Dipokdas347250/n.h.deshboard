@@ -1,126 +1,149 @@
-import React, { useEffect, useState } from "react";
-import { FaPlay, FaTrash, FaUpload } from "react-icons/fa";
-import { api, getErrorMessage } from "../../lib/api";
+import { useEffect, useState } from "react";
+import { api } from "../../lib/api";
+import { useLanguage } from "../../i18n/useLanguage";
+import { PageShell, ErrorNote, SuccessNote, EmptyNote, Field, inputClass } from "../common/PageShell";
 
-const VideoManager = () => {
-  const [videos, setVideos] = useState([]);
+const EMPTY = { title: "", titleBn: "", description: "", descriptionBn: "" };
+
+export default function VideoManager() {
+  const { t, apiMessage, pick } = useLanguage();
+  const [videos, setVideos] = useState(null);
+  const [form, setForm] = useState(EMPTY);
   const [file, setFile] = useState(null);
-  const [title, setTitle] = useState("");
-  const [description, setDescription] = useState("");
-  const [loading, setLoading] = useState(true);
-  const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
-  const [message, setMessage] = useState("");
+  const [notice, setNotice] = useState("");
+  const [busy, setBusy] = useState(false);
 
-  const loadVideos = async () => {
-    try {
-      setLoading(true);
-      const response = await api.get("/video/admin/all-video");
-      setVideos(response.data.data || []);
-    } catch (requestError) {
-      setError(getErrorMessage(requestError));
-    } finally {
-      setLoading(false);
-    }
-  };
+  const load = () =>
+    api.get("/video/admin/all-video")
+      .then((response) => setVideos(response.data.data || []))
+      .catch((caught) => {
+        setVideos([]);
+        setError(apiMessage(caught));
+      });
 
   useEffect(() => {
-    loadVideos();
+    load();
+    // `load` only closes over stable helpers, so running once on mount is right.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const handleSubmit = async (event) => {
+  const change = (event) => setForm((current) => ({ ...current, [event.target.name]: event.target.value }));
+
+  const upload = async (event) => {
     event.preventDefault();
-    if (!file) return setError("Choose a video before uploading.");
+    setBusy(true);
+    setError("");
+    setNotice("");
 
-    const formData = new FormData();
-    formData.append("video", file);
-    formData.append("title", title);
-    formData.append("description", description);
+    const data = new FormData();
+    data.append("video", file);
+    Object.entries(form).forEach(([key, value]) => data.append(key, value));
 
     try {
-      setSubmitting(true);
-      setError("");
-      await api.post("/video/add-video", formData, {
-        headers: { "Content-Type": "multipart/form-data" },
-      });
+      await api.post("/video/add-video", data);
+      setForm(EMPTY);
       setFile(null);
-      setTitle("");
-      setDescription("");
-      setMessage("Video uploaded successfully.");
-      await loadVideos();
-    } catch (requestError) {
-      setError(getErrorMessage(requestError));
+      setNotice(t("video.created"));
+      await load();
+    } catch (caught) {
+      setError(apiMessage(caught));
     } finally {
-      setSubmitting(false);
+      setBusy(false);
     }
   };
 
-  const updateVideo = async (video, updates) => {
+  const togglePublished = async (video) => {
     try {
-      const response = await api.patch(`/video/update-video/${video._id}`, updates);
-      setVideos((current) => current.map((item) => item._id === video._id ? response.data.data : item));
-    } catch (requestError) {
-      setError(getErrorMessage(requestError));
+      const response = await api.patch(`/video/update-video/${video._id}`, { isPublished: !video.isPublished });
+      setVideos((current) => current.map((item) => (item._id === video._id ? response.data.data : item)));
+      setNotice(t("video.updated"));
+    } catch (caught) {
+      setError(apiMessage(caught));
     }
   };
 
-  const deleteVideo = async (id) => {
-    if (!window.confirm("Delete this video?")) return;
+  const remove = async (id) => {
+    if (!window.confirm(t("common.confirmDelete"))) return;
     try {
       await api.delete(`/video/delete-video/${id}`);
-      setVideos((current) => current.filter((video) => video._id !== id));
-    } catch (requestError) {
-      setError(getErrorMessage(requestError));
+      setVideos((current) => current.filter((item) => item._id !== id));
+      setNotice(t("video.deleted"));
+    } catch (caught) {
+      setError(apiMessage(caught));
     }
   };
 
   return (
-    <main className="min-h-screen bg-[#062B63]/95 p-4 text-white sm:p-6">
-      <div className="mx-auto max-w-6xl space-y-8">
-        <div>
-          <p className="text-sm uppercase tracking-[0.25em] text-emerald-200">Content studio</p>
-          <h1 className="mt-2 text-3xl font-bold">Video library</h1>
-          <p className="mt-2 text-emerald-100">Upload product stories and control what appears above the store footer.</p>
+    <PageShell title={t("video.title")}>
+      <ErrorNote message={error} />
+      <SuccessNote message={notice} />
+
+      <form onSubmit={upload} className="mb-8 max-w-3xl space-y-4 rounded-2xl bg-white/10 p-6">
+        <h2 className="text-lg font-bold">{t("video.add")}</h2>
+
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Field label={t("video.videoTitle")} htmlFor="video-title">
+            <input id="video-title" required name="title" value={form.title} onChange={change} className={inputClass} />
+          </Field>
+          <Field label={t("video.videoTitleBn")} htmlFor="video-title-bn">
+            <input id="video-title-bn" name="titleBn" value={form.titleBn} onChange={change} className={inputClass} />
+          </Field>
         </div>
 
-        <form onSubmit={handleSubmit} className="rounded-2xl bg-white p-5 text-gray-900 shadow-xl sm:p-7">
-          <div className="mb-5 flex items-center gap-3">
-            <span className="rounded-full bg-emerald-100 p-3 text-emerald-700"><FaUpload /></span>
-            <div><h2 className="text-xl font-bold">Add a video</h2><p className="text-sm text-gray-500">MP4, WebM, or another supported video format up to 100 MB.</p></div>
-          </div>
-          <div className="grid gap-4 md:grid-cols-2">
-            <input value={title} onChange={(event) => setTitle(event.target.value)} required placeholder="Video title" className="rounded-lg border border-gray-200 px-4 py-3 outline-none focus:border-emerald-500" />
-            <input type="file" accept="video/*" onChange={(event) => setFile(event.target.files?.[0] || null)} required className="rounded-lg border border-gray-200 px-3 py-2.5 text-sm" />
-            <textarea value={description} onChange={(event) => setDescription(event.target.value)} placeholder="Short description (optional)" rows="3" className="rounded-lg border border-gray-200 px-4 py-3 outline-none focus:border-emerald-500 md:col-span-2" />
-          </div>
-          <button disabled={submitting} className="mt-4 inline-flex items-center gap-2 rounded-lg bg-emerald-700 px-5 py-3 font-semibold text-white transition hover:bg-emerald-800 disabled:cursor-wait disabled:opacity-60">
-            <FaUpload /> {submitting ? "Uploading..." : "Upload video"}
-          </button>
-          {message && <p className="mt-3 text-sm text-emerald-700">{message}</p>}
-          {error && <p className="mt-3 text-sm text-red-600">{error}</p>}
-        </form>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Field label={t("video.description")} htmlFor="video-description">
+            <textarea id="video-description" rows={2} name="description" value={form.description} onChange={change} className={inputClass} />
+          </Field>
+          <Field label={t("video.descriptionBn")} htmlFor="video-description-bn">
+            <textarea id="video-description-bn" rows={2} name="descriptionBn" value={form.descriptionBn} onChange={change} className={inputClass} />
+          </Field>
+        </div>
 
-        <section>
-          <div className="mb-4 flex items-center justify-between"><h2 className="text-2xl font-bold">All videos</h2><span className="rounded-full bg-white/15 px-3 py-1 text-sm">{videos.length} total</span></div>
-          {loading ? <p className="text-emerald-100">Loading videos...</p> : videos.length === 0 ? <p className="rounded-xl bg-white/10 p-6 text-emerald-100">No videos uploaded yet.</p> : <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
-            {videos.map((video) => (
-              <article key={video._id} className="overflow-hidden rounded-xl bg-white text-gray-900 shadow-lg">
-                <video src={video.video} controls preload="metadata" className="aspect-video w-full bg-black object-cover" />
-                <div className="p-4">
-                  <input value={video.title} onChange={(event) => setVideos((current) => current.map((item) => item._id === video._id ? { ...item, title: event.target.value } : item))} onBlur={(event) => updateVideo(video, { title: event.target.value })} className="w-full border-b border-gray-200 pb-2 text-lg font-bold outline-none focus:border-emerald-500" />
-                  <textarea value={video.description || ""} onChange={(event) => setVideos((current) => current.map((item) => item._id === video._id ? { ...item, description: event.target.value } : item))} onBlur={(event) => updateVideo(video, { description: event.target.value })} rows="2" placeholder="Description" className="mt-3 w-full resize-none text-sm text-gray-600 outline-none" />
-                  <div className="mt-4 flex items-center justify-between gap-3">
-                    <button onClick={() => updateVideo(video, { isPublished: !video.isPublished })} className={`rounded-full px-3 py-1 text-xs font-bold ${video.isPublished ? "bg-emerald-100 text-emerald-700" : "bg-gray-100 text-gray-500"}`}><FaPlay className="mr-1 inline" />{video.isPublished ? "Published" : "Hidden"}</button>
-                    <button onClick={() => deleteVideo(video._id)} className="inline-flex items-center gap-2 rounded-lg bg-red-50 px-3 py-2 text-sm font-semibold text-red-600 hover:bg-red-100"><FaTrash /> Delete</button>
-                  </div>
-                </div>
-              </article>
-            ))}
-          </div>}
-        </section>
-      </div>
-    </main>
+        <Field label={t("video.file")} htmlFor="video-file">
+          <input
+            id="video-file"
+            required
+            type="file"
+            accept="video/*"
+            onChange={(event) => setFile(event.target.files?.[0] || null)}
+            className="w-full cursor-pointer rounded-lg bg-white/15 p-2 text-white file:mr-3 file:rounded-md file:border-none file:bg-green-500 file:px-4 file:py-2 file:text-white"
+          />
+        </Field>
+
+        <button disabled={busy} className="w-full rounded-lg bg-green-500 py-3 font-semibold text-white transition hover:bg-green-400 disabled:opacity-50">
+          {busy ? t("video.uploading") : t("video.add")}
+        </button>
+      </form>
+
+      {videos === null ? (
+        <p className="text-white/70">{t("common.loading")}</p>
+      ) : videos.length ? (
+        <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
+          {videos.map((video) => (
+            <article key={video._id} className="overflow-hidden rounded-xl bg-white/10 shadow-lg">
+              <video src={video.video} controls preload="metadata" className="aspect-video w-full bg-black object-cover" />
+              <div className="p-4">
+                <h3 className="font-semibold">{pick(video.title, video.titleBn)}</h3>
+                {(video.description || video.descriptionBn) && (
+                  <p className="mt-1 line-clamp-2 text-sm text-white/60">{pick(video.description, video.descriptionBn)}</p>
+                )}
+
+                <label className="mt-3 flex items-center gap-2 text-sm">
+                  <input type="checkbox" checked={video.isPublished} onChange={() => togglePublished(video)} className="h-4 w-4 accent-green-500" />
+                  {t("video.published")}
+                </label>
+
+                <button onClick={() => remove(video._id)} className="mt-3 w-full rounded-lg bg-red-500 py-2 text-sm text-white transition hover:bg-red-400">
+                  {t("common.delete")}
+                </button>
+              </div>
+            </article>
+          ))}
+        </div>
+      ) : (
+        <EmptyNote message={t("video.none")} />
+      )}
+    </PageShell>
   );
-};
-
-export default VideoManager;
+}

@@ -1,58 +1,53 @@
 import { createBrowserRouter, RouterProvider } from "react-router";
 import RootLayout from "./components/layout/RootLayout";
-import Home from "./components/pages/Home";
-import About from "./components/pages/About";
+import { LanguageProvider } from "./i18n/LanguageContext";
+
+import Dashboard from "./components/home/Dashboard";
 import Login from "./components/auth/Login";
 import Register from "./components/auth/Register";
-import AllBanner from "./components/pages/AllBanner";
-import Get_Banner from "./components/pages/Get_Banner";
-import Add_category from "./components/category/Add_category";
-import All_category from "./components/category/All_category";
-import All_product from "./components/product/All_product";
-import Add_product from "./components/product/Add_product";
+import AddBanner from "./components/banner/Banner";
+import GetBanner from "./components/banner/GetBanner";
+import AddCategory from "./components/category/Add_category";
+import AllCategory from "./components/category/All_category";
+import AddProduct from "./components/product/Add_product";
+import AllProduct from "./components/product/All_product";
+import VideoManager from "./components/video/VideoManager";
 import Orders from "./components/pages/Orders";
+import FraudReview from "./components/pages/FraudReview";
 import Customers from "./components/pages/Customers";
 import Transactions from "./components/pages/Transactions";
 import Analytics from "./components/pages/Analytics";
-import VideoManager from "./components/video/VideoManager";
+import Settings from "./components/pages/Settings";
 
 const router = createBrowserRouter([
   {
     path: "/",
     Component: RootLayout,
     children: [
-      { index: true, Component: Home },
-      { path: "about", Component: About },
-      { path: "banner", Component: AllBanner },
-      { path: "banner/all", Component: Get_Banner },
-      { path: "all-category", Component: All_category },
-      { path: "add-category", Component: Add_category },
-      { path: "all-product", Component: All_product },
-      { path: "add-product", Component: Add_product },
+      { index: true, Component: Dashboard },
+      { path: "add-product", Component: AddProduct },
+      { path: "all-product", Component: AllProduct },
+      { path: "add-category", Component: AddCategory },
+      { path: "all-category", Component: AllCategory },
+      { path: "banner", Component: AddBanner },
+      { path: "banner/all", Component: GetBanner },
+      { path: "videos", Component: VideoManager },
       { path: "orders", Component: Orders },
+      { path: "fraud-review", Component: FraudReview },
       { path: "customers", Component: Customers },
       { path: "transactions", Component: Transactions },
       { path: "analytics", Component: Analytics },
-      { path: "videos", Component: VideoManager },
+      { path: "settings", Component: Settings },
     ],
   },
-  {
-    path: "/login",
-    Component: Login,
-  },
-  {
-    path: "/register",
-    Component: Register,
-  },
+  { path: "/login", Component: Login },
+  { path: "/register", Component: Register },
 ]);
 
-
-const App = () => {
+export default function App() {
   return (
-    <>
-    <RouterProvider router={router} />
-    </>
-  )
+    <LanguageProvider>
+      <RouterProvider router={router} />
+    </LanguageProvider>
+  );
 }
-
-export default App

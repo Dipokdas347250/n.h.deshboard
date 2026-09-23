@@ -1,4 +1,6 @@
 @import "tailwindcss";
+/* The fonts are linked from index.html so they load in parallel with the CSS.
+   Hind Siliguri carries the Bangla glyphs; Inter handles the Latin text. */
 
 :root {
   --brand-navy: #062b63;
@@ -7,37 +9,23 @@
   --brand-green-dark: #0f6d31;
 }
 
+@theme {
+  --color-brand-navy: #062b63;
+  --color-brand-blue: #1255a4;
+  --color-brand-green: #16863d;
+  --font-sans: "Inter", "Hind Siliguri", system-ui, sans-serif;
+}
+
 body {
   background: #f4f7fb;
+  font-family: "Inter", "Hind Siliguri", system-ui, sans-serif;
 }
 
-
-/* @theme: {
-  extend: {
-    animation: {
-      gradient: "gradient 6s ease infinite",
-    },
-    keyframes: {
-      gradient: {
-        "0%, 100%": { backgroundPosition: "0% 50%" },
-        "50%": { backgroundPosition: "100% 50%" },
-      },
-    },
-    backgroundSize: {
-      '200%': '200%',
-    }
-  }
-} */
-
- /* @keyframes float {
-  0% { transform: translateY(0px); }
-  50% { transform: translateY(-20px); }
-  100% { transform: translateY(0px); }
+html:lang(bn) body {
+  font-family: "Hind Siliguri", "Inter", system-ui, sans-serif;
 }
 
-.animate-float {
-  animation: float 6s ease-in-out infinite;
-} */
- .scrollmain::-webkit-scrollbar {
- display: none;
+/* Hides the scrollbar on the horizontal strips inside panels. */
+.scrollmain::-webkit-scrollbar {
+  display: none;
 }

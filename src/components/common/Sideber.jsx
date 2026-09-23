@@ -1,185 +1,126 @@
-import React from 'react'
-import { FaBorderAll } from "react-icons/fa";
+import { NavLink, useNavigate } from "react-router";
+import { IoClose, IoSettingsSharp } from "react-icons/io5";
+import { FaBorderAll, FaShopify, FaUsers, FaVideo } from "react-icons/fa6";
 import { AiFillProduct } from "react-icons/ai";
-import { FaBarsStaggered } from "react-icons/fa6";
-import { FaShopify } from "react-icons/fa6";
 import { MdOutlineLibraryBooks } from "react-icons/md";
-import { FaUsers } from "react-icons/fa";
 import { VscArrowSwap } from "react-icons/vsc";
-import { BsBarChartFill } from "react-icons/bs";
-import { IoSettingsSharp } from "react-icons/io5";
-import { TbHelpSquareRounded } from "react-icons/tb";
+import { BsBarChartFill, BsShieldExclamation } from "react-icons/bs";
 import { RiLogoutCircleRLine } from "react-icons/ri";
 import { GiVerticalBanner } from "react-icons/gi";
-import { Link } from 'react-router';
-import { IoClose } from "react-icons/io5";
-import { FaVideo } from "react-icons/fa";
+import { api } from "../../lib/api";
+import { useAuthStore } from "../zustendstore/AuthStore";
+import { useLanguage } from "../../i18n/useLanguage";
 
-
-
+const linkClass = ({ isActive }) =>
+  `flex items-center gap-3 rounded-r-lg border-l-4 p-2 transition duration-200 ${
+    isActive ? "border-green-300 bg-green-300/20" : "border-[#064e3b] hover:border-green-300 hover:bg-green-300/10"
+  }`;
 
 const Sideber = ({ open = false, onClose = () => {} }) => {
+  const navigate = useNavigate();
+  const { t } = useLanguage();
+  const { clearUser } = useAuthStore();
+
+  const groups = [
+    {
+      title: t("nav.products"),
+      items: [
+        { to: "/add-product", label: t("nav.addProduct"), icon: FaShopify },
+        { to: "/all-product", label: t("nav.allProducts"), icon: FaShopify },
+      ],
+    },
+    {
+      title: t("nav.category"),
+      items: [
+        { to: "/add-category", label: t("nav.addCategory"), icon: AiFillProduct },
+        { to: "/all-category", label: t("nav.allCategories"), icon: AiFillProduct },
+      ],
+    },
+    {
+      title: t("nav.banner"),
+      items: [
+        { to: "/banner", label: t("nav.addBanner"), icon: GiVerticalBanner },
+        { to: "/banner/all", label: t("nav.allBanners"), icon: GiVerticalBanner },
+      ],
+    },
+  ];
+
+  const singles = [
+    { to: "/videos", label: t("nav.videos"), icon: FaVideo },
+    { to: "/orders", label: t("nav.orders"), icon: MdOutlineLibraryBooks },
+    { to: "/fraud-review", label: t("nav.fraud"), icon: BsShieldExclamation },
+    { to: "/customers", label: t("nav.customers"), icon: FaUsers },
+    { to: "/transactions", label: t("nav.transactions"), icon: VscArrowSwap },
+    { to: "/analytics", label: t("nav.analytics"), icon: BsBarChartFill },
+    { to: "/settings", label: t("nav.settings"), icon: IoSettingsSharp },
+  ];
+
+  const logout = async () => {
+    try {
+      await api.post("/auth/logout");
+    } finally {
+      clearUser();
+      navigate("/login", { replace: true });
+    }
+  };
+
   return (
     <>
-      {open && <button type="button" aria-label="Close navigation" onClick={onClose} className="fixed inset-0 z-40 bg-black/50 md:hidden" />}
-      <section className={`fixed inset-y-0 left-0 z-50 w-[min(82vw,300px)] border-r border-[#031d43] bg-[#062B63] px-2 pb-25 pt-5 transition-transform duration-300 md:w-[20%] md:translate-x-0 ${open ? "translate-x-0" : "-translate-x-full"}`}>
-        <div className=" ">
-          <div className="p-2 flex justify-between items-center gap-3 cursor-pointer">
+      {open && <button type="button" aria-label={t("common.close")} onClick={onClose} className="fixed inset-0 z-40 bg-black/50 md:hidden" />}
 
-           <Link to="/">
-            <div className="flex items-center justify-center gap-3">
-              <FaBorderAll className='text-[20px] text-white' />
-              <h2 className=' text-white text-2xl font-bold '>Dashboard</h2>
-            </div>
-           </Link>
-            <div className="flex items-center gap-3">
-              <FaBarsStaggered className='text-white text-[20px]' />
-              <button type="button" onClick={onClose} className="text-white md:hidden" aria-label="Close navigation"><IoClose size={24} /></button>
-            </div>
-          </div>
-
-          <div className=" space-y-3 mt-10">
-            <div className="mt-10  border-t  border-gray-300 pt-5">
-            <div className=" p-2 cursor-pointer duration-300 ease-in-out hover:bg-green-300/20 rounded-r-lg border-l-4 border-[#064e3b] hover:border-green-300">
-              <h2 className=' text-white text-lg font-semibold uppercase'>Product</h2>
-            </div>
-            <div className="ml-5">
-              <div className="">
-              <Link to="/add-product">
-              <div className="flex items-center gap-3 p-2 cursor-pointer duration-300 ease-in-out hover:bg-green-300/20 rounded-r-lg border-l-4 border-[#064e3b] hover:border-green-300">
-                <FaShopify className='text-[16px] text-white' />
-                <h2 className=' text-white text-lg font-semibold'>Add Products</h2>
-              </div>
-              </Link>
-            </div>
-            <div className="">
-              <Link to="/all-product">
-              <div className="flex items-center gap-3 p-2 cursor-pointer duration-300 ease-in-out hover:bg-green-300/20 rounded-r-lg border-l-4 border-[#064e3b] hover:border-green-300">
-                <FaShopify className='text-[16px] text-white' />
-                <h2 className=' text-white text-lg font-semibold'> All Products</h2>
-              </div>
-              </Link>
-            </div>
-            </div>
-            </div>
-            <div className="mt-10  border-t  border-gray-300 pt-5">
-            <div className=" p-2 cursor-pointer duration-300 ease-in-out hover:bg-green-300/20 rounded-r-lg border-l-4 border-[#064e3b] hover:border-green-300">
-              <h2 className=' text-white text-lg font-semibold uppercase'>Category</h2>
-            </div>
-            <div className="ml-5">
-             
-            <div className="">
-              <Link to="/add-category">
-              <div className="flex items-center gap-3 p-2 cursor-pointer duration-300 ease-in-out hover:bg-green-300/20 rounded-r-lg border-l-4 border-[#064e3b] hover:border-green-300">
-                <AiFillProduct className='text-[16px] text-white' />
-                <h2 className=' text-white text-lg font-semibold'>Add Category</h2>
-              </div>
-              </Link>
-            </div>
-             <div className="">
-                <Link to="/all-category">
-              <div className="flex items-center gap-3 p-2 cursor-pointer duration-300 ease-in-out hover:bg-green-300/20 rounded-r-lg border-l-4 border-[#064e3b] hover:border-green-300">
-                <AiFillProduct className='text-[16px] text-white' />
-                <h2 className=' text-white text-lg font-semibold'>All Category</h2>
-              </div>
-               </Link>
-            </div>
-            </div>
-            </div>
-
-            <div className="mt-10  border-t border-b border-gray-300 py-5">
-            <div className=" p-2 cursor-pointer duration-300 ease-in-out hover:bg-green-300/20 rounded-r-lg border-l-4 border-[#064e3b] hover:border-green-300">
-              <h2 className=' text-white text-lg font-semibold uppercase'>Banner</h2>
-            </div>
-           <div className="ml-5">
-             <div className="">
-              <Link to="/banner">
-                <div className="flex items-center gap-3 p-2 cursor-pointer duration-300 ease-in-out hover:bg-green-300/20 rounded-r-lg border-l-4 border-[#064e3b] hover:border-green-300">
-                  <GiVerticalBanner className='text-[16px] text-white' />
-                  <h2 className=' text-white text-lg font-semibold'>Add Banner</h2>
-                </div>
-              </Link>
-            </div>
-            <div className="">
-              <Link to="/banner/all">
-                <div className="flex items-center gap-3 p-2 cursor-pointer duration-300 ease-in-out hover:bg-green-300/20 rounded-r-lg border-l-4 border-[#064e3b] hover:border-green-300">
-                  <GiVerticalBanner className='text-[16px] text-white' />
-                  <h2 className=' text-white text-lg font-semibold'>All Banner</h2>
-                </div>
-              </Link>
-            </div>
-           </div>
-            </div>
-
-            <div className="mt-10 border-b border-gray-300 pb-5">
-              <Link to="/videos">
-                <div className="flex items-center gap-3 rounded-r-lg border-l-4 border-[#064e3b] p-2 transition duration-300 ease-in-out hover:border-green-300 hover:bg-green-300/20">
-                  <FaVideo className='text-[16px] text-white' />
-                  <h2 className='text-lg font-semibold text-white'>Videos</h2>
-                </div>
-              </Link>
-            </div>
-            
-            <div className="">
-              <Link to="/orders">
-              <div className="flex items-center gap-3 p-2 cursor-pointer duration-300 ease-in-out hover:bg-green-300/20 rounded-r-lg border-l-4 border-[#064e3b] hover:border-green-300">
-                <MdOutlineLibraryBooks className='text-[16px] text-white' />
-                <h2 className=' text-white text-lg font-semibold'>Orders</h2>
-              </div>
-              </Link>
-            </div>
-            <div className="">
-              <Link to="/customers">
-              <div className="flex items-center gap-3 p-2 cursor-pointer duration-300 ease-in-out hover:bg-green-300/20 rounded-r-lg border-l-4 border-[#064e3b] hover:border-green-300">
-                <FaUsers className='text-[16px] text-white' />
-                <h2 className=' text-white text-lg font-semibold'>Customers</h2>
-              </div>
-              </Link>
-            </div>
-            <div className="">
-              <Link to="/transactions">
-              <div className="flex items-center gap-3 p-2 cursor-pointer duration-300 ease-in-out hover:bg-green-300/20 rounded-r-lg border-l-4 border-[#064e3b] hover:border-green-300">
-                <VscArrowSwap className='text-[16px] text-white' />
-                <h2 className=' text-white text-lg font-semibold'>Transactions</h2>
-              </div>
-              </Link>
-            </div>
-            <div className="">
-              <Link to="/analytics">
-              <div className="flex items-center gap-3 p-2 cursor-pointer duration-300 ease-in-out hover:bg-green-300/20 rounded-r-lg border-l-4 border-[#064e3b] hover:border-green-300">
-                <BsBarChartFill className='text-[16px] text-white' />
-                <h2 className=' text-white text-lg font-semibold'>Analytics</h2>
-              </div>
-              </Link>
-            </div>
-          </div>
-
-          <div className="">
-            <div className="mt-10  border-t border-gray-300 pt-5">
-             <div className=" p-2 cursor-pointer duration-300 ease-in-out hover:bg-green-300/20 rounded-r-lg border-l-4 border-[#064e3b] hover:border-green-300">
-              <h2 className=' text-white text-lg font-semibold uppercase'>support</h2>
-            </div>
-           <div className="space-y-3 mt-5">
-             <div className="flex items-center gap-3 p-2 cursor-pointer duration-300 ease-in-out hover:bg-green-300/20 rounded-r-lg border-l-4 border-[#064e3b] hover:border-green-300">
-              <IoSettingsSharp className='text-[16px] text-white' />
-              <h2 className=' text-white text-lg font-semibold'>Settings</h2>
-            </div>
-             <div className="flex items-center gap-3 p-2 cursor-pointer duration-300 ease-in-out hover:bg-green-300/20 rounded-r-lg border-l-4 border-[#064e3b] hover:border-green-300">
-              <TbHelpSquareRounded className='text-[16px] text-white' />
-              <h2 className=' text-white text-lg font-semibold'>Helps</h2>
-            </div>
-             <div className="flex items-center gap-3 p-2 cursor-pointer duration-300 ease-in-out hover:bg-green-300/20 rounded-r-lg border-l-4 border-[#064e3b] hover:border-green-300">
-              <RiLogoutCircleRLine className='text-[16px] text-white' />
-              <h2 className=' text-white text-lg font-semibold'>Log out</h2>
-            </div>
-           </div>
-            
-          </div>
-          </div>
+      <aside
+        className={`fixed inset-y-0 left-0 z-50 w-[min(82vw,300px)] overflow-y-auto border-r border-[#031d43] bg-[#062B63] px-2 pb-10 pt-5 transition-transform duration-300 md:w-[20%] md:translate-x-0 ${
+          open ? "translate-x-0" : "-translate-x-full"
+        }`}
+      >
+        <div className="flex items-center justify-between gap-3 p-2">
+          <NavLink to="/" onClick={onClose} className="flex items-center gap-3">
+            <FaBorderAll className="text-[20px] text-white" />
+            <span className="text-xl font-bold text-white">{t("nav.dashboard")}</span>
+          </NavLink>
+          <button type="button" onClick={onClose} className="text-white md:hidden" aria-label={t("common.close")}>
+            <IoClose size={24} />
+          </button>
         </div>
-      </section>
-    </>
-  )
-}
 
-export default Sideber
+        <nav className="mt-6 space-y-6">
+          {groups.map((group) => (
+            <div key={group.title} className="border-t border-white/20 pt-4">
+              <h2 className="px-2 pb-2 text-sm font-semibold uppercase tracking-wide text-white/60">{group.title}</h2>
+              <div className="ml-3 space-y-1">
+                {group.items.map(({ to, label, icon: Icon }) => (
+                  <NavLink key={to} to={to} onClick={onClose} className={linkClass}>
+                    <Icon className="shrink-0 text-[16px] text-white" />
+                    <span className="font-medium text-white">{label}</span>
+                  </NavLink>
+                ))}
+              </div>
+            </div>
+          ))}
+
+          <div className="space-y-1 border-t border-white/20 pt-4">
+            {singles.map(({ to, label, icon: Icon }) => (
+              <NavLink key={to} to={to} onClick={onClose} className={linkClass}>
+                <Icon className="shrink-0 text-[16px] text-white" />
+                <span className="font-medium text-white">{label}</span>
+              </NavLink>
+            ))}
+          </div>
+
+          <div className="border-t border-white/20 pt-4">
+            <button
+              type="button"
+              onClick={logout}
+              className="flex w-full items-center gap-3 rounded-r-lg border-l-4 border-[#064e3b] p-2 text-left transition hover:border-red-400 hover:bg-red-400/10"
+            >
+              <RiLogoutCircleRLine className="shrink-0 text-[16px] text-white" />
+              <span className="font-medium text-white">{t("nav.logout")}</span>
+            </button>
+          </div>
+        </nav>
+      </aside>
+    </>
+  );
+};
+
+export default Sideber;
