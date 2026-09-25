@@ -104,7 +104,7 @@ export default function FraudReview() {
                   <div className="flex justify-between gap-4">
                     <dt>{t("orders.address")}</dt>
                     <dd className="max-w-[60%] text-right">
-                      {customer.address}, {[customer.city, customer.district].filter(Boolean).join(", ")}
+                      {customer.address}, {[customer.city, customer.district, customer.division].filter(Boolean).join(", ")}
                     </dd>
                   </div>
                   <div className="flex justify-between gap-4">

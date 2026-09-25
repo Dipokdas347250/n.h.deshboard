@@ -116,7 +116,7 @@ export default function Orders() {
                     <td className="max-w-[220px] p-4 text-sm">
                       <span className="block">{customer.address}</span>
                       <span className="block text-white/60">
-                        {[customer.city, customer.district, customer.postcode].filter(Boolean).join(", ")}
+                        {[customer.city, customer.district, customer.division, customer.postcode].filter(Boolean).join(", ")}
                       </span>
                       {customer.note && <span className="mt-1 block text-xs italic text-white/50">{customer.note}</span>}
                     </td>
