@@ -3,13 +3,20 @@ import { api } from "../../lib/api";
 import { useLanguage } from "../../i18n/useLanguage";
 import { PageShell, ErrorNote, SuccessNote, EmptyNote, Field, inputClass } from "../common/PageShell";
 
-const EMPTY = { title: "", titleBn: "", description: "", descriptionBn: "" };
+const EMPTY = { youtubeUrl: "", title: "", titleBn: "", description: "", descriptionBn: "" };
+
+/** Same rules as the server: the 11-character id from any common YouTube link. */
+const youtubeIdOf = (value) => {
+  const text = String(value || "").trim();
+  if (/^[A-Za-z0-9_-]{11}$/.test(text)) return text;
+  const match = text.match(/(?:youtu\.be\/|[?&]v=|\/(?:shorts|embed|live|v)\/)([A-Za-z0-9_-]{11})(?![A-Za-z0-9_-])/);
+  return match ? match[1] : "";
+};
 
 export default function VideoManager() {
   const { t, apiMessage, pick } = useLanguage();
   const [videos, setVideos] = useState(null);
   const [form, setForm] = useState(EMPTY);
-  const [file, setFile] = useState(null);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const [busy, setBusy] = useState(false);
@@ -28,6 +35,8 @@ export default function VideoManager() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  const previewId = youtubeIdOf(form.youtubeUrl);
+
   const change = (event) => setForm((current) => ({ ...current, [event.target.name]: event.target.value }));
 
   const upload = async (event) => {
@@ -36,14 +45,9 @@ export default function VideoManager() {
     setError("");
     setNotice("");
 
-    const data = new FormData();
-    data.append("video", file);
-    Object.entries(form).forEach(([key, value]) => data.append(key, value));
-
     try {
-      await api.post("/video/add-video", data);
+      await api.post("/video/add-video", form);
       setForm(EMPTY);
-      setFile(null);
       setNotice(t("video.created"));
       await load();
     } catch (caught) {
@@ -82,6 +86,28 @@ export default function VideoManager() {
       <form onSubmit={upload} className="mb-8 max-w-3xl space-y-4 rounded-2xl bg-white/10 p-6">
         <h2 className="text-lg font-bold">{t("video.add")}</h2>
 
+        <Field label={t("video.youtubeUrl")} hint={t("video.youtubeHint")} htmlFor="video-url">
+          <input
+            id="video-url"
+            required
+            type="url"
+            name="youtubeUrl"
+            value={form.youtubeUrl}
+            onChange={change}
+            placeholder="https://www.youtube.com/watch?v=..."
+            className={inputClass}
+          />
+        </Field>
+
+        {previewId && (
+          <img
+            src={`https://i.ytimg.com/vi/${previewId}/mqdefault.jpg`}
+            alt={t("common.preview")}
+            className="aspect-video w-full max-w-xs rounded-lg bg-black object-cover"
+          />
+        )}
+        {form.youtubeUrl.trim() && !previewId && <p className="text-sm text-amber-200">{t("video.youtubeInvalid")}</p>}
+
         <div className="grid gap-4 sm:grid-cols-2">
           <Field label={t("video.videoTitle")} htmlFor="video-title">
             <input id="video-title" required name="title" value={form.title} onChange={change} className={inputClass} />
@@ -100,19 +126,8 @@ export default function VideoManager() {
           </Field>
         </div>
 
-        <Field label={t("video.file")} htmlFor="video-file">
-          <input
-            id="video-file"
-            required
-            type="file"
-            accept="video/*"
-            onChange={(event) => setFile(event.target.files?.[0] || null)}
-            className="w-full cursor-pointer rounded-lg bg-white/15 p-2 text-white file:mr-3 file:rounded-md file:border-none file:bg-green-500 file:px-4 file:py-2 file:text-white"
-          />
-        </Field>
-
-        <button disabled={busy} className="w-full rounded-lg bg-green-500 py-3 font-semibold text-white transition hover:bg-green-400 disabled:opacity-50">
-          {busy ? t("video.uploading") : t("video.add")}
+        <button disabled={busy || !previewId} className="w-full rounded-lg bg-green-500 py-3 font-semibold text-white transition hover:bg-green-400 disabled:opacity-50">
+          {busy ? t("common.saving") : t("video.add")}
         </button>
       </form>
 
@@ -122,7 +137,18 @@ export default function VideoManager() {
         <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
           {videos.map((video) => (
             <article key={video._id} className="overflow-hidden rounded-xl bg-white/10 shadow-lg">
-              <video src={video.video} controls preload="metadata" className="aspect-video w-full bg-black object-cover" />
+              {video.source === "youtube" && video.youtubeId ? (
+                <iframe
+                  src={`https://www.youtube-nocookie.com/embed/${video.youtubeId}?rel=0`}
+                  title={pick(video.title, video.titleBn)}
+                  loading="lazy"
+                  allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  allowFullScreen
+                  className="aspect-video w-full bg-black"
+                />
+              ) : (
+                <video src={video.video} controls preload="metadata" className="aspect-video w-full bg-black object-cover" />
+              )}
               <div className="p-4">
                 <h3 className="font-semibold">{pick(video.title, video.titleBn)}</h3>
                 {(video.description || video.descriptionBn) && (

@@ -1,6 +1,6 @@
 @import "tailwindcss";
 /* The fonts are linked from index.html so they load in parallel with the CSS.
-   Hind Siliguri carries the Bangla glyphs; Inter handles the Latin text. */
+   Hind Siliguri carries the Bangla glyphs; Poppins handles the Latin text. */
 
 :root {
   --brand-navy: #062b63;
@@ -13,19 +13,42 @@
   --color-brand-navy: #062b63;
   --color-brand-blue: #1255a4;
   --color-brand-green: #16863d;
-  --font-sans: "Inter", "Hind Siliguri", system-ui, sans-serif;
+  --font-sans: "Poppins", "Hind Siliguri", system-ui, sans-serif;
 }
 
 body {
   background: #f4f7fb;
-  font-family: "Inter", "Hind Siliguri", system-ui, sans-serif;
+  font-family: "Poppins", "Hind Siliguri", system-ui, sans-serif;
 }
 
 html:lang(bn) body {
-  font-family: "Hind Siliguri", "Inter", system-ui, sans-serif;
+  font-family: "Hind Siliguri", "Poppins", system-ui, sans-serif;
 }
 
 /* Hides the scrollbar on the horizontal strips inside panels. */
 .scrollmain::-webkit-scrollbar {
   display: none;
+}
+
+/* Printing a page (e.g. the day's account on Orders) leaves out the chrome:
+   navigation, sidebar and controls, and keeps the panel colours. */
+@media print {
+  .no-print,
+  nav,
+  aside {
+    display: none !important;
+  }
+
+  .print-full {
+    width: 100% !important;
+  }
+
+  * {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .report-card {
+    break-inside: avoid;
+  }
 }

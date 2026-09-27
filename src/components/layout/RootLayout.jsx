@@ -11,10 +11,10 @@ const RootLayout = () => {
     <PrivateRoute>
       <Navber onMenuClick={() => setSidebarOpen(true)} />
       <div className="flex">
-        <div className="w-0 md:w-[20%]">
+        <div className="no-print w-0 md:w-[20%]">
           <Sideber open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
         </div>
-        <div className="w-full min-w-0 md:w-[80%]">
+        <div className="print-full w-full min-w-0 md:w-[80%]">
           <Outlet />
         </div>
       </div>

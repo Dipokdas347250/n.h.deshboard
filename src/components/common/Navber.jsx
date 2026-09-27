@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
-import { useLocation, useNavigate } from "react-router";
-import { IoSearch, IoClose, IoMenu } from "react-icons/io5";
+import { useNavigate } from "react-router";
+import { IoSearch, IoClose, IoMenu, IoCamera } from "react-icons/io5";
 import { BsBell, BsBellFill } from "react-icons/bs";
 import pro from "../../assets/pro.png";
 import { api } from "../../lib/api";
@@ -8,11 +8,13 @@ import { useAuthStore } from "../zustendstore/AuthStore";
 import { useLanguage } from "../../i18n/useLanguage";
 import LanguageSwitcher from "./LanguageSwitcher";
 import { Field, inputClass } from "./PageShell";
+import { useOrderNotifications, notificationsSupported } from "./useOrderNotifications";
+
+const ALERT_MS = 10 * 1000;
 
 const Navber = ({ onMenuClick }) => {
   const navigate = useNavigate();
-  const location = useLocation();
-  const { t, apiMessage } = useLanguage();
+  const { t, apiMessage, language, formatPrice } = useLanguage();
   const { user, setUser, clearUser } = useAuthStore();
   const dropdownRef = useRef(null);
   const notificationRef = useRef(null);
@@ -25,7 +27,31 @@ const Navber = ({ onMenuClick }) => {
   const [profile, setProfile] = useState({ fullname: "", phone: "", address: "", password: "" });
   const [profileUserId, setProfileUserId] = useState(null);
   const [toast, setToast] = useState("");
-  const [notifications, setNotifications] = useState([]);
+  const [alerts, setAlerts] = useState([]);
+  const [photoBusy, setPhotoBusy] = useState(false);
+  const [permission, setPermission] = useState(() => (notificationsSupported() ? Notification.permission : "unsupported"));
+
+  const avatar = user?.photo || pro;
+  const customerName = (order) => order.customer?.name || t("orders.guest");
+  const formatWhen = (value) =>
+    new Date(value).toLocaleString(language === "bn" ? "bn-BD" : "en-GB", {
+      day: "numeric",
+      month: "short",
+      hour: "numeric",
+      minute: "2-digit",
+    });
+
+  const { latest, unread, lastSeen, markSeen } = useOrderNotifications({
+    userId: user?._id,
+    describe: (order) => ({
+      title: t("notify.newOrderTitle"),
+      body: t("notify.newOrderBody", { name: customerName(order), amount: formatPrice(order.totalprice), order: order.orderNumber }),
+    }),
+    onNewOrder: (order) => {
+      setAlerts((current) => [...current.slice(-2), order]);
+      setTimeout(() => setAlerts((current) => current.filter((item) => item._id !== order._id)), ALERT_MS);
+    },
+  });
 
   // Fill the edit form from the signed-in account as soon as it is known.
   if (user && user._id !== profileUserId) {
@@ -41,28 +67,6 @@ const Navber = ({ onMenuClick }) => {
     document.addEventListener("mousedown", closeMenus);
     return () => document.removeEventListener("mousedown", closeMenus);
   }, []);
-
-  // Anything still waiting on staff: unconfirmed orders and flagged ones.
-  useEffect(() => {
-    let active = true;
-
-    api.get("/checkout/all-orders")
-      .then((response) => {
-        if (!active) return;
-        setNotifications(
-          (response.data.data || [])
-            .filter((order) => order.deliveryStatus === "pending" || order.fraudStatus === "review")
-            .slice(0, 6)
-        );
-      })
-      .catch(() => {
-        if (active) setNotifications([]);
-      });
-
-    return () => {
-      active = false;
-    };
-  }, [location.pathname]);
 
   useEffect(() => {
     if (!toast) return undefined;
@@ -92,6 +96,43 @@ const Navber = ({ onMenuClick }) => {
     } catch (error) {
       setToast(apiMessage(error));
     }
+  };
+
+  const uploadPhoto = async (event) => {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) return;
+
+    const data = new FormData();
+    data.append("photo", file);
+    setPhotoBusy(true);
+    try {
+      const response = await api.patch("/auth/profile/photo", data);
+      setUser(response.data.data);
+      setToast(t("auth.photoUpdated"));
+    } catch (error) {
+      setToast(apiMessage(error));
+    } finally {
+      setPhotoBusy(false);
+    }
+  };
+
+  const toggleNotifications = () => {
+    setNotificationsOpen((open) => {
+      if (!open) markSeen();
+      return !open;
+    });
+  };
+
+  const enableDesktopAlerts = async () => {
+    if (!notificationsSupported()) return;
+    setPermission(await Notification.requestPermission());
+  };
+
+  const openOrder = (order) => {
+    setNotificationsOpen(false);
+    setAlerts((current) => current.filter((item) => item._id !== order._id));
+    navigate(order.fraudStatus === "review" ? "/fraud-review" : "/orders");
   };
 
   const logout = async () => {
@@ -136,51 +177,84 @@ const Navber = ({ onMenuClick }) => {
             <div className="relative" ref={notificationRef}>
               <button
                 type="button"
-                onClick={() => setNotificationsOpen((open) => !open)}
+                onClick={toggleNotifications}
                 className="relative rounded-full bg-white/20 p-2.5"
                 aria-label={t("nav.notifications")}
               >
-                {notifications.length ? <BsBellFill /> : <BsBell />}
-                {notifications.length > 0 && (
+                {unread ? <BsBellFill className="animate-pulse" /> : <BsBell />}
+                {unread > 0 && (
                   <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1 text-[10px]">
-                    {notifications.length}
+                    {unread > 99 ? "99+" : unread}
                   </span>
                 )}
               </button>
 
               {notificationsOpen && (
-                <div className="absolute right-0 mt-3 w-72 rounded-xl bg-white p-4 text-black shadow-xl">
-                  <h3 className="font-semibold">{t("nav.pendingOrders")}</h3>
-                  {notifications.length ? (
-                    notifications.map((order) => (
-                      <button
-                        type="button"
-                        key={order._id}
-                        onClick={() => {
-                          setNotificationsOpen(false);
-                          navigate(order.fraudStatus === "review" ? "/fraud-review" : "/orders");
-                        }}
-                        className="mt-3 block w-full border-b pb-2 text-left text-sm hover:text-green-700"
-                      >
-                        {t("nav.orderAwaiting", { name: order.customer?.name || order.user?.fullname || t("orders.guest") })}
-                      </button>
-                    ))
-                  ) : (
-                    <p className="mt-3 text-sm text-gray-500">{t("nav.noNotifications")}</p>
+                <div className="absolute -right-12 mt-3 w-[min(22rem,calc(100vw-1.5rem))] rounded-xl bg-white p-4 text-black shadow-xl sm:right-0">
+                  <h3 className="font-semibold">{t("notify.latestOrders")}</h3>
+
+                  {permission === "default" && (
+                    <button
+                      type="button"
+                      onClick={enableDesktopAlerts}
+                      className="mt-3 w-full rounded-lg bg-green-50 px-3 py-2 text-left text-xs text-green-800 hover:bg-green-100"
+                    >
+                      {t("notify.enableDesktop")}
+                    </button>
                   )}
+                  {permission === "denied" && <p className="mt-3 text-xs text-gray-500">{t("notify.desktopBlocked")}</p>}
+
+                  <div className="mt-2 max-h-80 overflow-y-auto">
+                    {latest.length ? (
+                      latest.map((order) => {
+                        const isNew = lastSeen && new Date(order.createdAt) > new Date(lastSeen);
+                        return (
+                          <button
+                            type="button"
+                            key={order._id}
+                            onClick={() => openOrder(order)}
+                            className={`mt-1 flex w-full items-start gap-2 rounded-lg p-2 text-left text-sm hover:bg-gray-100 ${isNew ? "bg-green-50" : ""}`}
+                          >
+                            <span className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${isNew ? "bg-green-500" : "bg-transparent"}`} />
+                            <span className="min-w-0 flex-1">
+                              <span className="block truncate font-medium">
+                                {t("notify.orderFrom", { name: customerName(order) })}
+                              </span>
+                              <span className="block text-xs text-gray-500">
+                                {order.orderNumber} · {formatPrice(order.totalprice)} · {formatWhen(order.createdAt)}
+                              </span>
+                            </span>
+                          </button>
+                        );
+                      })
+                    ) : (
+                      <p className="mt-3 text-sm text-gray-500">{t("nav.noNotifications")}</p>
+                    )}
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setNotificationsOpen(false);
+                      navigate("/orders");
+                    }}
+                    className="mt-3 w-full rounded-lg bg-[#062B63] py-2 text-sm font-semibold text-white"
+                  >
+                    {t("notify.viewAll")}
+                  </button>
                 </div>
               )}
             </div>
 
             <div ref={dropdownRef} className="relative">
               <button type="button" onClick={() => setProfileOpen((open) => !open)} aria-label={t("nav.editProfile")}>
-                <img src={pro} alt="" className="h-9 w-9 rounded-full border-2 border-white object-cover sm:h-10 sm:w-10" />
+                <img src={avatar} alt="" className="h-9 w-9 rounded-full border-2 border-white object-cover sm:h-10 sm:w-10" />
               </button>
 
               {profileOpen && (
                 <div className="absolute right-0 mt-3 w-64 rounded-xl bg-white p-4 text-black shadow-xl">
                   <div className="flex items-center gap-3 border-b pb-3">
-                    <img src={pro} alt="" className="h-12 w-12 rounded-full" />
+                    <img src={avatar} alt="" className="h-12 w-12 shrink-0 rounded-full object-cover" />
                     <div className="min-w-0">
                       <h3 className="truncate font-semibold">{user?.fullname}</h3>
                       <p className="truncate text-sm text-gray-500">{user?.email}</p>
@@ -204,8 +278,47 @@ const Navber = ({ onMenuClick }) => {
 
       {toast && <div className="fixed right-4 top-20 z-50 rounded-lg bg-white px-4 py-3 text-sm text-gray-800 shadow-xl">{toast}</div>}
 
+      {alerts.length > 0 && (
+        <div className="no-print fixed bottom-4 right-4 z-50 flex w-[min(22rem,calc(100vw-2rem))] flex-col gap-2" role="status" aria-live="polite">
+          {alerts.map((order) => (
+            <div key={order._id} className="flex items-start gap-3 rounded-xl border-l-4 border-green-500 bg-white p-4 text-sm text-gray-800 shadow-2xl">
+              <BsBellFill className="mt-0.5 shrink-0 text-green-600" />
+              <button type="button" onClick={() => openOrder(order)} className="min-w-0 flex-1 text-left">
+                <span className="block font-semibold">{t("notify.newOrderTitle")}</span>
+                <span className="block text-gray-600">
+                  {t("notify.newOrderBody", { name: customerName(order), amount: formatPrice(order.totalprice), order: order.orderNumber })}
+                </span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setAlerts((current) => current.filter((item) => item._id !== order._id))}
+                aria-label={t("common.close")}
+                className="text-gray-400 hover:text-gray-700"
+              >
+                <IoClose />
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+
       {profileEditOpen && (
         <Modal title={t("nav.editProfile")} onClose={() => setProfileEditOpen(false)}>
+          <div className="mb-5 flex items-center gap-4">
+            <img src={avatar} alt="" className="h-20 w-20 shrink-0 rounded-full border-2 border-white/40 object-cover" />
+            <div>
+              <label
+                htmlFor="profile-photo"
+                className={`inline-flex cursor-pointer items-center gap-2 rounded-lg bg-white/15 px-4 py-2 text-sm text-white hover:bg-white/25 ${photoBusy ? "pointer-events-none opacity-50" : ""}`}
+              >
+                <IoCamera />
+                {photoBusy ? t("common.saving") : t("auth.changePhoto")}
+              </label>
+              <input id="profile-photo" type="file" accept="image/png,image/jpeg,image/webp" onChange={uploadPhoto} className="sr-only" />
+              <p className="mt-1 text-xs text-white/50">{t("auth.photoHint")}</p>
+            </div>
+          </div>
+
           <form onSubmit={saveProfile} className="space-y-3 text-white">
             <Field label={t("auth.fullname")} htmlFor="profile-name">
               <input id="profile-name" required value={profile.fullname} onChange={(event) => setProfile({ ...profile, fullname: event.target.value })} className={inputClass} />

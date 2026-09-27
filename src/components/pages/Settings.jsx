@@ -9,13 +9,18 @@ const BLANK_ZONE = { key: "", label: "", labelBn: "", charge: 0, estimatedDays: 
 const toKey = (label) =>
   label.trim().toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "") || `zone_${Date.now()}`;
 
-/** Delivery charges and the fake-order detection thresholds. */
+const NO_KEYS = { apiKey: "", secretKey: "" };
+
+/** Delivery charges, fake-order thresholds, Meta Pixel and Steadfast courier. */
 export default function Settings() {
-  const { t, apiMessage } = useLanguage();
+  const { t, apiMessage, formatPrice } = useLanguage();
   const [settings, setSettings] = useState(null);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const [busy, setBusy] = useState(false);
+  // Saved keys are never sent back, so these only hold newly typed ones.
+  const [keys, setKeys] = useState(NO_KEYS);
+  const [connection, setConnection] = useState({ state: "idle", text: "" });
 
   useEffect(() => {
     let active = true;
@@ -52,8 +57,11 @@ export default function Settings() {
         freeDeliveryThreshold: settings.freeDeliveryThreshold,
         codMaxAmount: settings.codMaxAmount,
         fraud: settings.fraud,
+        metaPixelId: settings.metaPixelId || "",
+        steadfast: { ...keys, autoSend: Boolean(settings.steadfast?.autoSend) },
       });
       setSettings(response.data.data);
+      setKeys(NO_KEYS);
       setNotice(t("settings.saved"));
     } catch (caught) {
       setError(apiMessage(caught));
@@ -61,6 +69,18 @@ export default function Settings() {
       setBusy(false);
     }
   };
+
+  const testConnection = async () => {
+    setConnection({ state: "busy", text: "" });
+    try {
+      const response = await api.get("/admin/steadfast/balance");
+      setConnection({ state: "ok", text: t("steadfast.connected", { balance: formatPrice(response.data.data.balance) }) });
+    } catch (caught) {
+      setConnection({ state: "error", text: apiMessage(caught) });
+    }
+  };
+
+  const steadfastSaved = Boolean(settings?.steadfast?.apiKeyHint && settings?.steadfast?.secretKeySet);
 
   if (!settings) {
     return (
@@ -217,6 +237,87 @@ export default function Settings() {
                 />
               </Field>
             ))}
+          </div>
+        </section>
+
+        <section className="rounded-2xl bg-white/10 p-5">
+          <h2 className="text-lg font-bold">{t("pixel.title")}</h2>
+          <p className="mt-1 text-sm text-white/60">{t("pixel.subtitle")}</p>
+          <div className="mt-5 max-w-md">
+            <Field label={t("pixel.id")} hint={t("pixel.hint")} htmlFor="meta-pixel-id">
+              <input
+                id="meta-pixel-id"
+                inputMode="numeric"
+                pattern="\d{6,20}"
+                placeholder="123456789012345"
+                value={settings.metaPixelId || ""}
+                onChange={(event) => setSettings({ ...settings, metaPixelId: event.target.value.replace(/\D/g, "") })}
+                className={inputClass}
+              />
+            </Field>
+          </div>
+        </section>
+
+        <section className="rounded-2xl bg-white/10 p-5">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <h2 className="text-lg font-bold">{t("steadfast.title")}</h2>
+              <p className="mt-1 max-w-2xl text-sm text-white/60">{t("steadfast.subtitle")}</p>
+            </div>
+            <span className={`rounded-full px-3 py-1 text-xs font-semibold ${steadfastSaved ? "bg-green-400/20 text-green-200" : "bg-white/10 text-white/60"}`}>
+              {steadfastSaved ? t("steadfast.keysSaved", { hint: settings.steadfast.apiKeyHint }) : t("steadfast.keysMissing")}
+            </span>
+          </div>
+
+          <div className="mt-5 grid gap-4 md:grid-cols-2">
+            <Field label={t("steadfast.apiKey")} hint={steadfastSaved ? t("steadfast.keepHint") : ""} htmlFor="steadfast-api-key">
+              <input
+                id="steadfast-api-key"
+                type="password"
+                autoComplete="off"
+                value={keys.apiKey}
+                onChange={(event) => setKeys({ ...keys, apiKey: event.target.value })}
+                className={inputClass}
+              />
+            </Field>
+            <Field label={t("steadfast.secretKey")} hint={steadfastSaved ? t("steadfast.keepHint") : ""} htmlFor="steadfast-secret-key">
+              <input
+                id="steadfast-secret-key"
+                type="password"
+                autoComplete="off"
+                value={keys.secretKey}
+                onChange={(event) => setKeys({ ...keys, secretKey: event.target.value })}
+                className={inputClass}
+              />
+            </Field>
+          </div>
+
+          <label className="mt-5 flex items-start gap-3">
+            <input
+              type="checkbox"
+              checked={Boolean(settings.steadfast?.autoSend)}
+              onChange={(event) => setSettings({ ...settings, steadfast: { ...settings.steadfast, autoSend: event.target.checked } })}
+              className="mt-1 h-5 w-5 accent-green-500"
+            />
+            <span>
+              <span className="block font-medium">{t("steadfast.autoSend")}</span>
+              <span className="block text-sm text-white/60">{t("steadfast.autoSendHint")}</span>
+            </span>
+          </label>
+
+          <div className="mt-5 flex flex-wrap items-center gap-3">
+            <button
+              type="button"
+              onClick={testConnection}
+              disabled={!steadfastSaved || connection.state === "busy"}
+              className="rounded-lg bg-blue-500 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-400 disabled:opacity-40"
+            >
+              {connection.state === "busy" ? t("common.loading") : t("steadfast.test")}
+            </button>
+            {connection.text && (
+              <span className={`text-sm ${connection.state === "ok" ? "text-green-200" : "text-red-200"}`}>{connection.text}</span>
+            )}
+            {!steadfastSaved && <span className="text-sm text-white/50">{t("steadfast.saveFirst")}</span>}
           </div>
         </section>
 
