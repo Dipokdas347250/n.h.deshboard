@@ -24,7 +24,7 @@ const Navber = ({ onMenuClick }) => {
   const [logoutOpen, setLogoutOpen] = useState(false);
   const [profileEditOpen, setProfileEditOpen] = useState(false);
   const [query, setQuery] = useState("");
-  const [profile, setProfile] = useState({ fullname: "", phone: "", address: "", password: "" });
+  const [profile, setProfile] = useState({ fullname: "", email: "", phone: "", address: "", password: "", currentPassword: "" });
   const [profileUserId, setProfileUserId] = useState(null);
   const [toast, setToast] = useState("");
   const [alerts, setAlerts] = useState([]);
@@ -56,8 +56,10 @@ const Navber = ({ onMenuClick }) => {
   // Fill the edit form from the signed-in account as soon as it is known.
   if (user && user._id !== profileUserId) {
     setProfileUserId(user._id);
-    setProfile({ fullname: user.fullname || "", phone: user.phone || "", address: user.address || "", password: "" });
+    setProfile({ fullname: user.fullname || "", email: user.email || "", phone: user.phone || "", address: user.address || "", password: "", currentPassword: "" });
   }
+
+  const emailChanged = profile.email.trim().toLowerCase() !== (user?.email || "").toLowerCase();
 
   useEffect(() => {
     const closeMenus = (event) => {
@@ -85,12 +87,14 @@ const Navber = ({ onMenuClick }) => {
     try {
       const response = await api.patch("/auth/profile", {
         fullname: profile.fullname,
+        email: profile.email,
         phone: profile.phone,
         address: profile.address,
         ...(profile.password ? { password: profile.password } : {}),
+        ...(emailChanged ? { currentPassword: profile.currentPassword } : {}),
       });
       setUser(response.data.data);
-      setProfile((current) => ({ ...current, password: "" }));
+      setProfile((current) => ({ ...current, email: response.data.data.email, password: "", currentPassword: "" }));
       setToast(t("auth.profileUpdated"));
       setProfileEditOpen(false);
     } catch (error) {
@@ -323,6 +327,14 @@ const Navber = ({ onMenuClick }) => {
             <Field label={t("auth.fullname")} htmlFor="profile-name">
               <input id="profile-name" required value={profile.fullname} onChange={(event) => setProfile({ ...profile, fullname: event.target.value })} className={inputClass} />
             </Field>
+            <Field label={t("auth.email")} htmlFor="profile-email">
+              <input id="profile-email" required type="email" value={profile.email} onChange={(event) => setProfile({ ...profile, email: event.target.value })} className={inputClass} />
+            </Field>
+            {emailChanged && (
+              <Field label={t("auth.currentPassword")} hint={t("auth.currentPasswordHint")} htmlFor="profile-current-password">
+                <input id="profile-current-password" required type="password" autoComplete="current-password" value={profile.currentPassword} onChange={(event) => setProfile({ ...profile, currentPassword: event.target.value })} className={inputClass} />
+              </Field>
+            )}
             <Field label={t("auth.phone")} htmlFor="profile-phone">
               <input id="profile-phone" value={profile.phone} onChange={(event) => setProfile({ ...profile, phone: event.target.value })} className={inputClass} />
             </Field>

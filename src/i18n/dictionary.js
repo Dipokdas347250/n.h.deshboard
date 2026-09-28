@@ -54,7 +54,8 @@ export const dictionary = {
     "nav.confirmLogout": "Log out of the dashboard?",
 
     "auth.loginTitle": "Dashboard sign in",
-    "auth.loginSubtitle": "Use your registered staff account to continue.",
+    "auth.loginSubtitle": "Only administrators can sign in to this dashboard.",
+    "auth.adminOnly": "Only administrators can sign in to the dashboard",
     "auth.registerTitle": "Create dashboard account",
     "auth.registerSubtitle": "Register and verify your email before signing in.",
     "auth.verifyTitle": "Verify your email",
@@ -85,6 +86,8 @@ export const dictionary = {
     "auth.verified": "Email verified. You can sign in now.",
     "auth.codeSent": "A new verification code was sent.",
     "auth.newPassword": "New password",
+    "auth.currentPassword": "Current password",
+    "auth.currentPasswordHint": "Needed to change the email you sign in with",
     "auth.newPasswordHint": "Leave blank to keep the current password",
     "auth.profileUpdated": "Profile updated successfully",
 
@@ -398,7 +401,8 @@ export const dictionary = {
     "nav.confirmLogout": "ড্যাশবোর্ড থেকে লগআউট করবেন?",
 
     "auth.loginTitle": "ড্যাশবোর্ডে সাইন ইন",
-    "auth.loginSubtitle": "আপনার নিবন্ধিত স্টাফ অ্যাকাউন্ট দিয়ে প্রবেশ করুন।",
+    "auth.loginSubtitle": "শুধুমাত্র অ্যাডমিন এই ড্যাশবোর্ডে সাইন ইন করতে পারেন।",
+    "auth.adminOnly": "শুধুমাত্র অ্যাডমিন ড্যাশবোর্ডে সাইন ইন করতে পারেন",
     "auth.registerTitle": "ড্যাশবোর্ড অ্যাকাউন্ট তৈরি",
     "auth.registerSubtitle": "সাইন ইন করার আগে রেজিস্টার করে ইমেইল যাচাই করুন।",
     "auth.verifyTitle": "ইমেইল যাচাই করুন",
@@ -429,6 +433,8 @@ export const dictionary = {
     "auth.verified": "ইমেইল যাচাই হয়েছে। এখন সাইন ইন করতে পারবেন।",
     "auth.codeSent": "নতুন যাচাইকরণ কোড পাঠানো হয়েছে।",
     "auth.newPassword": "নতুন পাসওয়ার্ড",
+    "auth.currentPassword": "বর্তমান পাসওয়ার্ড",
+    "auth.currentPasswordHint": "সাইন ইনের ইমেইল পরিবর্তন করতে প্রয়োজন",
     "auth.newPasswordHint": "পাসওয়ার্ড একই রাখতে চাইলে খালি রাখুন",
     "auth.profileUpdated": "প্রোফাইল সফলভাবে হালনাগাদ হয়েছে",
 

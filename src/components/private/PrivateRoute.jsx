@@ -5,8 +5,8 @@ import { useAuthStore } from "../zustendstore/AuthStore";
 import { useLanguage } from "../../i18n/useLanguage";
 
 /**
- * Gate for every dashboard page. Confirms the session belongs to an admin or
- * sub-admin before rendering anything, and sends everyone else to sign in.
+ * Gate for every dashboard page. Confirms the session belongs to an
+ * administrator before rendering anything, and sends everyone else to sign in.
  */
 export default function PrivateRoute({ children }) {
   const navigate = useNavigate();
@@ -20,6 +20,7 @@ export default function PrivateRoute({ children }) {
     api.get("/auth/getme")
       .then((response) => {
         if (!active) return;
+        if (response.data.data?.role !== "admin") throw new Error("Not an administrator");
         setUser(response.data.data);
         setChecked(true);
       })

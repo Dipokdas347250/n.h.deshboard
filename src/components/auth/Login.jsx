@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router";
 import { api } from "../../lib/api";
 import { useLanguage } from "../../i18n/useLanguage";
@@ -13,6 +13,19 @@ export default function Login() {
   const [form, setForm] = useState({ email: "", password: "" });
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  // Registration is only for creating the first administrator, so the link
+  // disappears once one exists.
+  const [canRegister, setCanRegister] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+    api.get("/auth/dashboard-status")
+      .then((response) => active && setCanRegister(!response.data.data?.adminExists))
+      .catch(() => {});
+    return () => {
+      active = false;
+    };
+  }, []);
 
   const change = (event) => setForm((current) => ({ ...current, [event.target.name]: event.target.value }));
 
@@ -26,8 +39,12 @@ export default function Login() {
     setError("");
     setBusy(true);
     try {
-      // `scope: "dashboard"` makes the API reject shoppers who have no staff role.
+      // `scope: "dashboard"` makes the API reject every account that is not an administrator.
       const response = await api.post("/auth/login", { ...form, scope: "dashboard" });
+      if (response.data.data?.role !== "admin") {
+        setError(t("auth.adminOnly"));
+        return;
+      }
       setUser(response.data.data);
       navigate("/");
     } catch (caught) {
@@ -54,12 +71,14 @@ export default function Login() {
           {busy ? t("auth.signingIn") : t("auth.login")}
         </button>
 
-        <p className="text-center text-sm text-white/70">
-          {t("auth.noAccount")}{" "}
-          <Link to="/register" className="font-semibold text-green-300 hover:underline">
-            {t("auth.register")}
-          </Link>
-        </p>
+        {canRegister && (
+          <p className="text-center text-sm text-white/70">
+            {t("auth.noAccount")}{" "}
+            <Link to="/register" className="font-semibold text-green-300 hover:underline">
+              {t("auth.register")}
+            </Link>
+          </p>
+        )}
       </form>
     </AuthShell>
   );
