@@ -6,10 +6,17 @@ import { PageShell, ErrorNote, SuccessNote, EmptyNote, inputClass, selectClass }
 import StatusBadge from "../common/StatusBadge";
 import OrdersReport from "./OrdersReport";
 
+// Orders with no delivery status yet count as pending, as StatusBadge shows them.
+const deliveryOf = (order) => order.deliveryStatus || "pending";
+
+/** Status tabs over the period's orders; `dot` matches the StatusBadge colours. */
 const FILTERS = [
-  { key: "all", labelKey: "orders.filterAll", params: {} },
-  { key: "pending", labelKey: "orders.filterPending", params: { deliveryStatus: "pending" } },
-  { key: "review", labelKey: "orders.filterReview", params: { fraudStatus: "review" } },
+  { key: "all", labelKey: "orders.filterAll", dot: "bg-white", match: () => true },
+  { key: "pending", labelKey: "orders.statusPending", dot: "bg-amber-400", match: (order) => deliveryOf(order) === "pending" },
+  { key: "confirm", labelKey: "orders.statusConfirm", dot: "bg-blue-400", match: (order) => deliveryOf(order) === "confirm" },
+  { key: "deliverd", labelKey: "orders.statusDeliverd", dot: "bg-green-400", match: (order) => deliveryOf(order) === "deliverd" },
+  { key: "cenceled", labelKey: "orders.statusCenceled", dot: "bg-red-400", match: (order) => deliveryOf(order) === "cenceled" },
+  { key: "review", labelKey: "orders.filterReview", dot: "bg-orange-400", match: (order) => order.fraudStatus === "review" },
 ];
 
 const PRESETS = ["today", "yesterday", "last7", "thisMonth", "last30"];
@@ -25,6 +32,11 @@ const canSendToCourier = (order) =>
   !order.courier?.consignmentId &&
   ["pending", "confirm"].includes(order.deliveryStatus) &&
   !["review", "blocked", "fake"].includes(order.fraudStatus);
+
+const tabClass = (active) =>
+  `flex min-w-[8.5rem] flex-1 items-center justify-between gap-3 rounded-xl px-4 py-3 text-left transition ${
+    active ? "bg-white text-[#062B63] shadow-lg" : "bg-white/10 text-white hover:bg-white/20"
+  }`;
 
 const chipClass = (active) =>
   `rounded-full px-4 py-2 text-sm font-semibold transition ${
@@ -42,14 +54,12 @@ export default function Orders() {
   const [range, setRange] = useState(() => ({ preset: "today", ...datePresets().today }));
   const { from, to } = range;
 
-  const fetchOrders = useCallback(
-    async (key) => {
-      const params = { ...(FILTERS.find((item) => item.key === key)?.params || {}), from, to };
-      const response = await api.get("/checkout/all-orders", { params });
-      return response.data.data || [];
-    },
-    [from, to]
-  );
+  // Every order in the period is loaded once; the status tabs filter it here so
+  // each tab can show its count and switching tabs needs no request.
+  const fetchOrders = useCallback(async () => {
+    const response = await api.get("/checkout/all-orders", { params: { from, to } });
+    return response.data.data || [];
+  }, [from, to]);
 
   const choosePreset = (preset) => setRange({ preset, ...datePresets()[preset] });
   const chooseDate = (field, value) => {
@@ -65,7 +75,7 @@ export default function Orders() {
   useEffect(() => {
     let active = true;
 
-    fetchOrders(filter)
+    fetchOrders()
       .then((items) => {
         if (!active) return;
         setOrders(items);
@@ -80,12 +90,12 @@ export default function Orders() {
     return () => {
       active = false;
     };
-  }, [filter, fetchOrders, apiMessage]);
+  }, [fetchOrders, apiMessage]);
 
   const updateStatus = async (id, deliveryStatus) => {
     try {
       await api.patch(`/admin/orders/${id}`, { deliveryStatus });
-      setOrders(await fetchOrders(filter));
+      setOrders(await fetchOrders());
     } catch (caught) {
       setError(apiMessage(caught, "orders.updateFailed"));
     }
@@ -109,13 +119,15 @@ export default function Orders() {
     } catch (caught) {
       setError(apiMessage(caught));
       // The failure reason is stored on the order, so show it in the row too.
-      setOrders(await fetchOrders(filter).catch(() => orders));
+      setOrders(await fetchOrders().catch(() => orders));
     } finally {
       setCourierBusy((current) => ({ ...current, [order._id]: false }));
     }
   };
 
-  const readyOrders = (orders || []).filter(readyForCourier);
+  const activeFilter = FILTERS.find((item) => item.key === filter) || FILTERS[0];
+  const visibleOrders = (orders || []).filter(activeFilter.match);
+  const readyOrders = visibleOrders.filter(readyForCourier);
 
   const sendAllReady = async () => {
     if (!window.confirm(t("steadfast.confirmBulk", { count: formatNumber(readyOrders.length) }))) return;
@@ -129,7 +141,7 @@ export default function Orders() {
       if (failures.length) {
         setError(failures.map((item) => `${item.orderNumber}: ${language === "bn" ? item.messageBn : item.message}`).join(" · "));
       }
-      setOrders(await fetchOrders(filter));
+      setOrders(await fetchOrders());
     } catch (caught) {
       setError(apiMessage(caught));
     } finally {
@@ -172,12 +184,31 @@ export default function Orders() {
         </div>
       </div>
 
-      <OrdersReport from={from} to={to} />
+     
+
+      <div className="no-print mb-4 flex flex-wrap gap-2" role="tablist" aria-label={t("orders.deliveryStatus")}>
+        {FILTERS.map((item) => (
+          <button
+            key={item.key}
+            type="button"
+            role="tab"
+            onClick={() => setFilter(item.key)}
+            aria-selected={filter === item.key}
+            className={tabClass(filter === item.key)}
+          >
+            <span className="flex items-center gap-2 text-sm font-semibold">
+              <span className={`h-2.5 w-2.5 rounded-full ${item.dot}`} aria-hidden="true" />
+              {t(item.labelKey)}
+            </span>
+            <span className="text-lg font-bold">{orders ? formatNumber(orders.filter(item.match).length) : "–"}</span>
+          </button>
+        ))}
+      </div>
 
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <h2 className="text-xl font-bold">
-          {t("orders.listTitle")}
-          {orders && <span className="ml-2 text-base font-normal text-white/60">({formatNumber(orders.length)})</span>}
+          {filter === "all" ? t("orders.listTitle") : t(activeFilter.labelKey)}
+          {orders && <span className="ml-2 text-base font-normal text-white/60">({formatNumber(visibleOrders.length)})</span>}
         </h2>
         <div className="no-print flex flex-wrap gap-2">
           {readyOrders.length > 0 && (
@@ -190,11 +221,6 @@ export default function Orders() {
               {courierBusy.bulk ? t("steadfast.sending") : t("steadfast.sendAll", { count: formatNumber(readyOrders.length) })}
             </button>
           )}
-          {FILTERS.map((item) => (
-            <button key={item.key} type="button" onClick={() => setFilter(item.key)} aria-pressed={filter === item.key} className={chipClass(filter === item.key)}>
-              {t(item.labelKey)}
-            </button>
-          ))}
         </div>
       </div>
 
@@ -203,7 +229,7 @@ export default function Orders() {
 
       {orders === null ? (
         <p className="text-white/70">{t("common.loading")}</p>
-      ) : orders.length ? (
+      ) : visibleOrders.length ? (
         <div className="overflow-x-auto rounded-xl bg-white/10">
           <table className="w-full min-w-[1180px] text-left">
             <thead>
@@ -220,7 +246,7 @@ export default function Orders() {
               </tr>
             </thead>
             <tbody>
-              {orders.map((order) => {
+              {visibleOrders.map((order) => {
                 const customer = order.customer || order.shipping || {};
                 return (
                   <tr key={order._id} className="border-b border-white/10 align-top last:border-0">
@@ -349,6 +375,7 @@ export default function Orders() {
       ) : (
         <EmptyNote message={t("orders.none")} />
       )}
+       <OrdersReport from={from} to={to} />
     </PageShell>
   );
 }

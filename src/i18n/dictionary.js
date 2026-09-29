@@ -349,6 +349,13 @@ export const dictionary = {
     "video.updated": "Video updated successfully",
     "video.deleted": "Video deleted",
     "video.none": "No videos yet.",
+    "video.products": "Products in this video",
+    "video.productsHint": "Pick every product shown in the video. They appear under it on the storefront so shoppers can buy them.",
+    "video.productsSearch": "Search products",
+    "video.productsSelected": "{count} selected",
+    "video.productsNone": "No products match.",
+    "video.editProducts": "Edit products",
+    "video.noProducts": "No products linked yet.",
   },
 
   bn: {
@@ -696,6 +703,13 @@ export const dictionary = {
     "video.updated": "ভিডিও সফলভাবে হালনাগাদ হয়েছে",
     "video.deleted": "ভিডিও মুছে ফেলা হয়েছে",
     "video.none": "এখনও কোনো ভিডিও নেই।",
+    "video.products": "এই ভিডিওর পণ্যসমূহ",
+    "video.productsHint": "ভিডিওতে দেখানো সব পণ্য বেছে নিন। স্টোরফ্রন্টে ভিডিওর নিচে এগুলো দেখাবে যাতে ক্রেতারা কিনতে পারেন।",
+    "video.productsSearch": "পণ্য খুঁজুন",
+    "video.productsSelected": "{count} টি নির্বাচিত",
+    "video.productsNone": "কোনো পণ্য মেলেনি।",
+    "video.editProducts": "পণ্য সম্পাদনা",
+    "video.noProducts": "এখনও কোনো পণ্য যুক্ত হয়নি।",
   },
 };
 
