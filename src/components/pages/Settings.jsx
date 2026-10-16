@@ -59,6 +59,7 @@ export default function Settings() {
         fraud: settings.fraud,
         metaPixelId: settings.metaPixelId || "",
         steadfast: { ...keys, autoSend: Boolean(settings.steadfast?.autoSend) },
+        merchantBilling: settings.merchantBilling,
       });
       setSettings(response.data.data);
       setKeys(NO_KEYS);
@@ -237,6 +238,60 @@ export default function Settings() {
                 />
               </Field>
             ))}
+          </div>
+        </section>
+
+        <section className="rounded-2xl bg-white/10 p-5">
+          <h2 className="text-lg font-bold">{t("billingSettings.title")}</h2>
+          <p className="mt-1 max-w-2xl text-sm text-white/60">{t("billingSettings.subtitle")}</p>
+          <div className="mt-5 grid gap-4 md:grid-cols-2">
+            <Field label={t("billingSettings.periodDays")} htmlFor="billing-period">
+              <input
+                id="billing-period"
+                type="number"
+                min="1"
+                max="365"
+                required
+                value={settings.merchantBilling?.periodDays ?? 30}
+                onChange={(event) => setSettings({ ...settings, merchantBilling: { ...settings.merchantBilling, periodDays: event.target.value } })}
+                className={inputClass}
+              />
+            </Field>
+            <Field label={t("billingSettings.graceDays")} hint={t("billingSettings.graceHint")} htmlFor="billing-grace">
+              <input
+                id="billing-grace"
+                type="number"
+                min="0"
+                max="60"
+                required
+                value={settings.merchantBilling?.graceDays ?? 3}
+                onChange={(event) => setSettings({ ...settings, merchantBilling: { ...settings.merchantBilling, graceDays: event.target.value } })}
+                className={inputClass}
+              />
+            </Field>
+            <Field label={t("billingSettings.defaultFee")} hint={t("billingSettings.defaultFeeHint")} htmlFor="billing-fee">
+              <input
+                id="billing-fee"
+                type="number"
+                min="0"
+                value={settings.merchantBilling?.defaultFee ?? 0}
+                onChange={(event) => setSettings({ ...settings, merchantBilling: { ...settings.merchantBilling, defaultFee: event.target.value } })}
+                className={inputClass}
+              />
+            </Field>
+            <div className="md:col-span-2">
+              <Field label={t("billingSettings.instructions")} htmlFor="billing-instructions">
+                <textarea
+                  id="billing-instructions"
+                  rows={4}
+                  maxLength={2000}
+                  placeholder={t("billingSettings.instructionsPlaceholder")}
+                  value={settings.merchantBilling?.instructions || ""}
+                  onChange={(event) => setSettings({ ...settings, merchantBilling: { ...settings.merchantBilling, instructions: event.target.value } })}
+                  className={inputClass}
+                />
+              </Field>
+            </div>
           </div>
         </section>
 

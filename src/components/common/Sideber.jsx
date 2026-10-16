@@ -1,10 +1,10 @@
 import { NavLink, useNavigate } from "react-router";
 import { IoClose, IoSettingsSharp } from "react-icons/io5";
-import { FaBorderAll, FaShopify, FaUsers, FaVideo } from "react-icons/fa6";
+import { FaBorderAll, FaShopify, FaStore, FaUsers, FaVideo, FaMoneyCheckDollar, FaHeadset, FaClipboardList } from "react-icons/fa6";
 import { AiFillProduct } from "react-icons/ai";
 import { MdOutlineLibraryBooks } from "react-icons/md";
 import { VscArrowSwap } from "react-icons/vsc";
-import { BsBarChartFill, BsShieldExclamation } from "react-icons/bs";
+import { BsBarChartFill, BsShieldExclamation, BsHouseDoorFill, BsBellFill } from "react-icons/bs";
 import { RiLogoutCircleRLine } from "react-icons/ri";
 import { GiVerticalBanner } from "react-icons/gi";
 import { api } from "../../lib/api";
@@ -19,9 +19,10 @@ const linkClass = ({ isActive }) =>
 const Sideber = ({ open = false, onClose = () => {} }) => {
   const navigate = useNavigate();
   const { t } = useLanguage();
-  const { clearUser } = useAuthStore();
+  const { user, clearUser } = useAuthStore();
+  const isMerchant = user?.role === "merchant";
 
-  const groups = [
+  const adminGroups = [
     {
       title: t("nav.products"),
       items: [
@@ -43,9 +44,21 @@ const Sideber = ({ open = false, onClose = () => {} }) => {
         { to: "/banner/all", label: t("nav.allBanners"), icon: GiVerticalBanner },
       ],
     },
+    {
+      title: t("nav.merchants"),
+      items: [
+        { to: "/merchants/applications", label: t("nav.merchantApplications"), icon: FaStore },
+        { to: "/merchants", label: t("nav.merchantList"), icon: FaStore, end: true },
+        { to: "/merchants/products", label: t("nav.productApprovals"), icon: FaStore },
+        { to: "/merchants/payments", label: t("nav.paymentProofs"), icon: FaMoneyCheckDollar },
+        { to: "/merchants/support", label: t("nav.supportTickets"), icon: FaHeadset },
+        { to: "/merchants/audit", label: t("nav.auditLog"), icon: FaClipboardList },
+        { to: "/notifications", label: t("center.title"), icon: BsBellFill },
+      ],
+    },
   ];
 
-  const singles = [
+  const adminSingles = [
     { to: "/videos", label: t("nav.videos"), icon: FaVideo },
     { to: "/orders", label: t("nav.orders"), icon: MdOutlineLibraryBooks },
     { to: "/fraud-review", label: t("nav.fraud"), icon: BsShieldExclamation },
@@ -54,6 +67,20 @@ const Sideber = ({ open = false, onClose = () => {} }) => {
     { to: "/analytics", label: t("nav.analytics"), icon: BsBarChartFill },
     { to: "/settings", label: t("nav.settings"), icon: IoSettingsSharp },
   ];
+
+  // A merchant only ever sees their own pages.
+  const merchantSingles = [
+    { to: "/merchant", label: t("mnav.home"), icon: BsHouseDoorFill, end: true },
+    { to: "/merchant/products/new", label: t("mnav.addProduct"), icon: FaShopify },
+    { to: "/merchant/products", label: t("mnav.products"), icon: FaShopify, end: true },
+    { to: "/merchant/orders", label: t("mnav.orders"), icon: MdOutlineLibraryBooks },
+    { to: "/merchant/billing", label: t("mnav.billing"), icon: FaMoneyCheckDollar },
+    { to: "/merchant/support", label: t("mnav.support"), icon: FaHeadset },
+    { to: "/merchant/notifications", label: t("center.title"), icon: BsBellFill },
+  ];
+
+  const groups = isMerchant ? [] : adminGroups;
+  const singles = isMerchant ? merchantSingles : adminSingles;
 
   const logout = async () => {
     try {
@@ -74,7 +101,7 @@ const Sideber = ({ open = false, onClose = () => {} }) => {
         }`}
       >
         <div className="flex items-center justify-between gap-3 p-2">
-          <NavLink to="/" onClick={onClose} className="flex items-center gap-3">
+          <NavLink to={isMerchant ? "/merchant" : "/"} onClick={onClose} className="flex items-center gap-3">
             <FaBorderAll className="text-[20px] text-white" />
             <span className="text-xl font-bold text-white">{t("nav.dashboard")}</span>
           </NavLink>
@@ -88,8 +115,8 @@ const Sideber = ({ open = false, onClose = () => {} }) => {
             <div key={group.title} className="border-t border-white/20 pt-4">
               <h2 className="px-2 pb-2 text-sm font-semibold uppercase tracking-wide text-white/60">{group.title}</h2>
               <div className="ml-3 space-y-1">
-                {group.items.map(({ to, label, icon: Icon }) => (
-                  <NavLink key={to} to={to} onClick={onClose} className={linkClass}>
+                {group.items.map(({ to, label, icon: Icon, end }) => (
+                  <NavLink key={to} to={to} end={end} onClick={onClose} className={linkClass}>
                     <Icon className="shrink-0 text-[16px] text-white" />
                     <span className="font-medium text-white">{label}</span>
                   </NavLink>
@@ -99,8 +126,8 @@ const Sideber = ({ open = false, onClose = () => {} }) => {
           ))}
 
           <div className="space-y-1 border-t border-white/20 pt-4">
-            {singles.map(({ to, label, icon: Icon }) => (
-              <NavLink key={to} to={to} onClick={onClose} className={linkClass}>
+            {singles.map(({ to, label, icon: Icon, end }) => (
+              <NavLink key={to} to={to} end={end} onClick={onClose} className={linkClass}>
                 <Icon className="shrink-0 text-[16px] text-white" />
                 <span className="font-medium text-white">{label}</span>
               </NavLink>

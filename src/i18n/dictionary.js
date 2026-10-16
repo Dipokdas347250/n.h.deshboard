@@ -1,3 +1,6 @@
+import { merchantDictionary } from "./merchantDictionary";
+import { supportDictionary } from "./supportDictionary";
+
 /**
  * Every visible string in the dashboard, in English and Bangla.
  * `useLanguage().t("key")` looks a key up in the active language, falling back
@@ -388,6 +391,8 @@ export const dictionary = {
     "video.productsNone": "No products match.",
     "video.editProducts": "Edit products",
     "video.noProducts": "No products linked yet.",
+    ...merchantDictionary.en,
+    ...supportDictionary.en,
   },
 
   bn: {
@@ -774,6 +779,8 @@ export const dictionary = {
     "video.productsNone": "কোনো পণ্য মেলেনি।",
     "video.editProducts": "পণ্য সম্পাদনা",
     "video.noProducts": "এখনও কোনো পণ্য যুক্ত হয়নি।",
+    ...merchantDictionary.bn,
+    ...supportDictionary.bn,
   },
 };
 

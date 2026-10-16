@@ -4,12 +4,31 @@ import { api } from "../../lib/api";
 import { useLanguage } from "../../i18n/useLanguage";
 import { PageShell, ErrorNote, SuccessNote, EmptyNote, Field, inputClass } from "../common/PageShell";
 
-const BLANK_FORM = { title: "", description: "", price: "", discountPrice: "", offer: "", sku: "", images: [] };
+const BLANK_FORM = { title: "", description: "", price: "", discountPrice: "", offer: "", sku: "", stock: "", images: [] };
 
+/** Badge colour for why a product is or is not on the storefront. */
+const VISIBILITY_STYLE = {
+  public: "bg-green-400/20 text-green-200",
+  pending: "bg-amber-400/20 text-amber-200",
+  rejected: "bg-red-400/20 text-red-200",
+  hidden: "bg-gray-900/60 text-white",
+  merchant_suspended: "bg-orange-400/20 text-orange-200",
+  merchant_locked: "bg-gray-900/60 text-white",
+};
+
+const FILTERS = ["all", "public", "hidden"];
+
+/**
+ * Every product, including ones customers cannot see right now — for example
+ * a suspended merchant's — with why each is hidden. Merchant products can be
+ * edited here but not deleted.
+ */
 export default function AllProduct() {
-  const { t, apiMessage, formatPrice } = useLanguage();
+  const { t, apiMessage, formatPrice, formatNumber } = useLanguage();
   const [searchParams] = useSearchParams();
   const search = (searchParams.get("search") || "").toLowerCase();
+  const merchantFilter = searchParams.get("merchant") || "";
+  const [filter, setFilter] = useState("all");
 
   const [products, setProducts] = useState(null);
   const [editing, setEditing] = useState(null);
@@ -20,7 +39,7 @@ export default function AllProduct() {
   useEffect(() => {
     let active = true;
 
-    api.get("/mainproduct/all-product")
+    api.get("/admin/products")
       .then((response) => {
         if (active) setProducts(response.data.data || []);
       })
@@ -57,6 +76,7 @@ export default function AllProduct() {
       discountPrice: product.discountPrice ?? product.diccountprice ?? "",
       offer: product.offer || "",
       sku: product.sku || "",
+      stock: product.stock ?? "",
       images: [],
     });
   };
@@ -71,7 +91,10 @@ export default function AllProduct() {
 
     try {
       const response = await api.patch(`/mainproduct/update-product/${editing}`, data);
-      setProducts((current) => current.map((item) => (item._id === editing ? { ...item, ...response.data.data } : item)));
+      // Keep the merchant and visibility worked out by the list endpoint.
+      setProducts((current) =>
+        current.map((item) => (item._id === editing ? { ...item, ...response.data.data, merchant: item.merchant, visibility: item.visibility } : item))
+      );
       setEditing(null);
       setNotice(t("product.updated"));
     } catch (caught) {
@@ -79,14 +102,31 @@ export default function AllProduct() {
     }
   };
 
-  const visible = (products || []).filter((product) =>
-    !search || product.title?.toLowerCase().includes(search) || product.sku?.toLowerCase().includes(search)
+  const visible = (products || []).filter(
+    (product) =>
+      (!search || product.title?.toLowerCase().includes(search) || product.sku?.toLowerCase().includes(search)) &&
+      (!merchantFilter || product.merchant?._id === merchantFilter) &&
+      (filter === "all" || (filter === "public") === (product.visibility === "public"))
   );
 
   return (
     <PageShell title={t("product.allTitle")}>
       <ErrorNote message={error} />
       <SuccessNote message={notice} />
+
+      <div className="mb-5 flex flex-wrap gap-2" role="group">
+        {FILTERS.map((key) => (
+          <button
+            key={key}
+            type="button"
+            onClick={() => setFilter(key)}
+            aria-pressed={filter === key}
+            className={`rounded-full px-4 py-2 text-sm font-semibold transition ${filter === key ? "bg-white text-[#062B63]" : "bg-white/10 text-white hover:bg-white/20"}`}
+          >
+            {t(`visibility.filter.${key}`)}
+          </button>
+        ))}
+      </div>
 
       {products === null ? (
         <p className="text-white/70">{t("common.loading")}</p>
@@ -116,6 +156,9 @@ export default function AllProduct() {
                   <Field label={t("product.sku")} htmlFor={`edit-sku-${product._id}`}>
                     <input id={`edit-sku-${product._id}`} value={form.sku} onChange={(event) => setForm({ ...form, sku: event.target.value })} className={`${inputClass} !p-2`} />
                   </Field>
+                  <Field label={t("mproduct.stock")} hint={t("mproduct.stockHint")} htmlFor={`edit-stock-${product._id}`}>
+                    <input id={`edit-stock-${product._id}`} type="number" min="0" step="1" value={form.stock} onChange={(event) => setForm({ ...form, stock: event.target.value })} className={`${inputClass} !p-2`} />
+                  </Field>
                   <Field label={t("product.images")} htmlFor={`edit-images-${product._id}`}>
                     <input
                       id={`edit-images-${product._id}`}
@@ -133,7 +176,13 @@ export default function AllProduct() {
                 </form>
               ) : (
                 <>
-                  <h2 className="mt-3 truncate text-lg font-semibold">{product.title}</h2>
+                  <div className="mt-3 flex flex-wrap items-center gap-2">
+                    <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${VISIBILITY_STYLE[product.visibility] || ""}`}>
+                      {t(`visibility.${product.visibility}`)}
+                    </span>
+                    <span className="text-xs text-white/60">{product.merchant ? t("mprod.by", { name: product.merchant.name }) : t("orders.storeItem")}</span>
+                  </div>
+                  <h2 className="mt-2 truncate text-lg font-semibold">{product.title}</h2>
                   <dl className="mt-2 space-y-1 text-sm text-white/70">
                     <div className="flex justify-between gap-2">
                       <dt>{t("product.sku")}</dt>
@@ -151,6 +200,10 @@ export default function AllProduct() {
                       </dd>
                     </div>
                     <div className="flex justify-between gap-2">
+                      <dt>{t("mproduct.stock")}</dt>
+                      <dd>{typeof product.stock === "number" ? formatNumber(product.stock) : t("mproduct.notTracked")}</dd>
+                    </div>
+                    <div className="flex justify-between gap-2">
                       <dt>{t("product.category")}</dt>
                       <dd className="truncate">{product.category?.name || "—"}</dd>
                     </div>
@@ -160,9 +213,12 @@ export default function AllProduct() {
                     <button onClick={() => startEdit(product)} className="flex-1 rounded-lg bg-blue-500 py-2 text-sm text-white transition hover:bg-blue-400">
                       {t("common.edit")}
                     </button>
-                    <button onClick={() => remove(product._id)} className="flex-1 rounded-lg bg-red-500 py-2 text-sm text-white transition hover:bg-red-400">
-                      {t("common.delete")}
-                    </button>
+                    {/* Merchant products are kept permanently; the API refuses to delete them too. */}
+                    {!product.merchant && (
+                      <button onClick={() => remove(product._id)} className="flex-1 rounded-lg bg-red-500 py-2 text-sm text-white transition hover:bg-red-400">
+                        {t("common.delete")}
+                      </button>
+                    )}
                   </div>
                 </>
               )}

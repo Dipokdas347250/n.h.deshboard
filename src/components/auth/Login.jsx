@@ -39,14 +39,15 @@ export default function Login() {
     setError("");
     setBusy(true);
     try {
-      // `scope: "dashboard"` makes the API reject every account that is not an administrator.
+      // `scope: "dashboard"` makes the API reject every account that is not an administrator or a merchant.
       const response = await api.post("/auth/login", { ...form, scope: "dashboard" });
-      if (response.data.data?.role !== "admin") {
+      const role = response.data.data?.role;
+      if (!["admin", "merchant"].includes(role)) {
         setError(t("auth.adminOnly"));
         return;
       }
       setUser(response.data.data);
-      navigate("/");
+      navigate(role === "merchant" ? "/merchant" : "/");
     } catch (caught) {
       setError(apiMessage(caught));
     } finally {
@@ -59,8 +60,8 @@ export default function Login() {
       <form onSubmit={submit} className="space-y-4">
         {error && <p className="rounded-lg bg-red-500/20 p-3 text-sm text-red-100">{error}</p>}
 
-        <Field label={t("auth.email")} htmlFor="login-email">
-          <input id="login-email" required type="email" name="email" value={form.email} onChange={change} className={inputClass} />
+        <Field label={t("auth.emailOrPhone")} htmlFor="login-email">
+          <input id="login-email" required type="text" inputMode="email" autoComplete="username" name="email" value={form.email} onChange={change} className={inputClass} />
         </Field>
 
         <Field label={t("auth.password")} htmlFor="login-password">
@@ -70,6 +71,13 @@ export default function Login() {
         <button disabled={busy} className="w-full rounded-full bg-green-500 px-6 py-4 font-semibold transition hover:bg-green-400 disabled:opacity-50">
           {busy ? t("auth.signingIn") : t("auth.login")}
         </button>
+
+        <p className="text-center text-sm text-white/70">
+          {t("auth.wantToSell")}{" "}
+          <Link to="/apply" className="font-semibold text-green-300 hover:underline">
+            {t("auth.applyMerchant")}
+          </Link>
+        </p>
 
         {canRegister && (
           <p className="text-center text-sm text-white/70">

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import { useSearchParams } from "react-router";
 import { api } from "../../lib/api";
 import { useLanguage } from "../../i18n/useLanguage";
 import { datePresets, todayInDhaka } from "../../lib/dates";
@@ -50,16 +51,38 @@ export default function Orders() {
   const [filter, setFilter] = useState("all");
   const [notice, setNotice] = useState("");
   const [courierBusy, setCourierBusy] = useState({});
-  // The page opens on today's account; any earlier day or span can be chosen.
-  const [range, setRange] = useState(() => ({ preset: "today", ...datePresets().today }));
+  // `?merchant=` narrows the list to orders that include that merchant's products.
+  const [searchParams, setSearchParams] = useSearchParams();
+  const merchant = searchParams.get("merchant") || "";
+  const [merchants, setMerchants] = useState([]);
+  // The page opens on today's account (the last 30 days when following a
+  // merchant's link); any earlier day or span can be chosen.
+  const [range, setRange] = useState(() => (merchant ? { preset: "last30", ...datePresets().last30 } : { preset: "today", ...datePresets().today }));
   const { from, to } = range;
 
   // Every order in the period is loaded once; the status tabs filter it here so
   // each tab can show its count and switching tabs needs no request.
   const fetchOrders = useCallback(async () => {
-    const response = await api.get("/checkout/all-orders", { params: { from, to } });
+    const response = await api.get("/checkout/all-orders", { params: { from, to, merchant: merchant || undefined } });
     return response.data.data || [];
-  }, [from, to]);
+  }, [from, to, merchant]);
+
+  useEffect(() => {
+    let active = true;
+    api.get("/admin/merchants")
+      .then((response) => active && setMerchants(response.data.data?.merchants || []))
+      .catch(() => {});
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const chooseMerchant = (value) => {
+    const params = new URLSearchParams(searchParams);
+    if (value) params.set("merchant", value);
+    else params.delete("merchant");
+    setSearchParams(params);
+  };
 
   const choosePreset = (preset) => setRange({ preset, ...datePresets()[preset] });
   const chooseDate = (field, value) => {
@@ -181,6 +204,19 @@ export default function Orders() {
             <span className="mb-1 block">{t("report.to")}</span>
             <input type="date" value={to} max={todayInDhaka()} onChange={(event) => chooseDate("to", event.target.value)} className={`${inputClass} !p-2 [color-scheme:dark]`} />
           </label>
+          {merchants.length > 0 && (
+            <label className="text-sm text-white/70">
+              <span className="mb-1 block">{t("orders.merchant")}</span>
+              <select value={merchant} onChange={(event) => chooseMerchant(event.target.value)} className={`${selectClass} !p-2`}>
+                <option value="">{t("orders.allMerchants")}</option>
+                {merchants.map((item) => (
+                  <option key={item._id} value={item._id}>
+                    {item.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
         </div>
       </div>
 
@@ -276,8 +312,14 @@ export default function Orders() {
 
                     <td className="max-w-[200px] p-4 text-sm">
                       {(order.items || []).map((item, index) => (
-                        <span key={`${item.product || index}`} className="block truncate">
+                        <span key={`${item.product?._id || item.product || index}`} className="block truncate">
                           {item.title || item.product?.title} × {formatNumber(item.quntity || 1)}
+                          {item.merchant?.name && <span className="text-xs text-white/50"> · {item.merchant.name}</span>}
+                        </span>
+                      ))}
+                      {(order.merchantStatus || []).map((entry) => (
+                        <span key={entry.merchant?._id || entry.merchant} className="mt-1 flex items-center gap-1 text-xs text-white/60">
+                          {entry.merchant?.name}: <StatusBadge kind="step" value={entry.status} />
                         </span>
                       ))}
                     </td>

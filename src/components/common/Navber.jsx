@@ -7,6 +7,7 @@ import { api } from "../../lib/api";
 import { useAuthStore } from "../zustendstore/AuthStore";
 import { useLanguage } from "../../i18n/useLanguage";
 import LanguageSwitcher from "./LanguageSwitcher";
+import InboxBell from "./InboxBell";
 import { Field, inputClass } from "./PageShell";
 import { useOrderNotifications, notificationsSupported } from "./useOrderNotifications";
 
@@ -32,6 +33,8 @@ const Navber = ({ onMenuClick }) => {
   const [permission, setPermission] = useState(() => (notificationsSupported() ? Notification.permission : "unsupported"));
 
   const avatar = user?.photo || pro;
+  // Order alerts read every order in the store, so only administrators get them.
+  const isAdmin = user?.role === "admin";
   const customerName = (order) => order.customer?.name || t("orders.guest");
   const formatWhen = (value) =>
     new Date(value).toLocaleString(language === "bn" ? "bn-BD" : "en-GB", {
@@ -42,7 +45,7 @@ const Navber = ({ onMenuClick }) => {
     });
 
   const { latest, unread, lastSeen, markSeen } = useOrderNotifications({
-    userId: user?._id,
+    userId: isAdmin ? user?._id : null,
     describe: (order) => ({
       title: t("notify.newOrderTitle"),
       body: t("notify.newOrderBody", { name: customerName(order), amount: formatPrice(order.totalprice), order: order.orderNumber }),
@@ -79,7 +82,7 @@ const Navber = ({ onMenuClick }) => {
   const search = (event) => {
     event.preventDefault();
     const value = query.trim();
-    if (value) navigate(`/all-product?search=${encodeURIComponent(value)}`);
+    if (value) navigate(`${isAdmin ? "/all-product" : "/merchant/products"}?search=${encodeURIComponent(value)}`);
   };
 
   const saveProfile = async (event) => {
@@ -178,77 +181,81 @@ const Navber = ({ onMenuClick }) => {
           <div className="flex shrink-0 items-center gap-1 sm:gap-3">
             <LanguageSwitcher className="hidden sm:flex" />
 
-            <div className="relative" ref={notificationRef}>
-              <button
-                type="button"
-                onClick={toggleNotifications}
-                className="relative rounded-full bg-white/20 p-2.5"
-                aria-label={t("nav.notifications")}
-              >
-                {unread ? <BsBellFill className="animate-pulse" /> : <BsBell />}
-                {unread > 0 && (
-                  <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1 text-[10px]">
-                    {unread > 99 ? "99+" : unread}
-                  </span>
-                )}
-              </button>
+            {(isAdmin || user?.role === "merchant") && <InboxBell role={user.role} />}
 
-              {notificationsOpen && (
-                <div className="absolute -right-12 mt-3 w-[min(22rem,calc(100vw-1.5rem))] rounded-xl bg-white p-4 text-black shadow-xl sm:right-0">
-                  <h3 className="font-semibold">{t("notify.latestOrders")}</h3>
+            {isAdmin && (
+              <div className="relative" ref={notificationRef}>
+                <button
+                  type="button"
+                  onClick={toggleNotifications}
+                  className="relative rounded-full bg-white/20 p-2.5"
+                  aria-label={t("nav.notifications")}
+                >
+                  {unread ? <BsBellFill className="animate-pulse" /> : <BsBell />}
+                  {unread > 0 && (
+                    <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1 text-[10px]">
+                      {unread > 99 ? "99+" : unread}
+                    </span>
+                  )}
+                </button>
 
-                  {permission === "default" && (
+                {notificationsOpen && (
+                  <div className="absolute -right-12 mt-3 w-[min(22rem,calc(100vw-1.5rem))] rounded-xl bg-white p-4 text-black shadow-xl sm:right-0">
+                    <h3 className="font-semibold">{t("notify.latestOrders")}</h3>
+
+                    {permission === "default" && (
+                      <button
+                        type="button"
+                        onClick={enableDesktopAlerts}
+                        className="mt-3 w-full rounded-lg bg-green-50 px-3 py-2 text-left text-xs text-green-800 hover:bg-green-100"
+                      >
+                        {t("notify.enableDesktop")}
+                      </button>
+                    )}
+                    {permission === "denied" && <p className="mt-3 text-xs text-gray-500">{t("notify.desktopBlocked")}</p>}
+
+                    <div className="mt-2 max-h-80 overflow-y-auto">
+                      {latest.length ? (
+                        latest.map((order) => {
+                          const isNew = lastSeen && new Date(order.createdAt) > new Date(lastSeen);
+                          return (
+                            <button
+                              type="button"
+                              key={order._id}
+                              onClick={() => openOrder(order)}
+                              className={`mt-1 flex w-full items-start gap-2 rounded-lg p-2 text-left text-sm hover:bg-gray-100 ${isNew ? "bg-green-50" : ""}`}
+                            >
+                              <span className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${isNew ? "bg-green-500" : "bg-transparent"}`} />
+                              <span className="min-w-0 flex-1">
+                                <span className="block truncate font-medium">
+                                  {t("notify.orderFrom", { name: customerName(order) })}
+                                </span>
+                                <span className="block text-xs text-gray-500">
+                                  {order.orderNumber} · {formatPrice(order.totalprice)} · {formatWhen(order.createdAt)}
+                                </span>
+                              </span>
+                            </button>
+                          );
+                        })
+                      ) : (
+                        <p className="mt-3 text-sm text-gray-500">{t("nav.noNotifications")}</p>
+                      )}
+                    </div>
+
                     <button
                       type="button"
-                      onClick={enableDesktopAlerts}
-                      className="mt-3 w-full rounded-lg bg-green-50 px-3 py-2 text-left text-xs text-green-800 hover:bg-green-100"
+                      onClick={() => {
+                        setNotificationsOpen(false);
+                        navigate("/orders");
+                      }}
+                      className="mt-3 w-full rounded-lg bg-[#062B63] py-2 text-sm font-semibold text-white"
                     >
-                      {t("notify.enableDesktop")}
+                      {t("notify.viewAll")}
                     </button>
-                  )}
-                  {permission === "denied" && <p className="mt-3 text-xs text-gray-500">{t("notify.desktopBlocked")}</p>}
-
-                  <div className="mt-2 max-h-80 overflow-y-auto">
-                    {latest.length ? (
-                      latest.map((order) => {
-                        const isNew = lastSeen && new Date(order.createdAt) > new Date(lastSeen);
-                        return (
-                          <button
-                            type="button"
-                            key={order._id}
-                            onClick={() => openOrder(order)}
-                            className={`mt-1 flex w-full items-start gap-2 rounded-lg p-2 text-left text-sm hover:bg-gray-100 ${isNew ? "bg-green-50" : ""}`}
-                          >
-                            <span className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${isNew ? "bg-green-500" : "bg-transparent"}`} />
-                            <span className="min-w-0 flex-1">
-                              <span className="block truncate font-medium">
-                                {t("notify.orderFrom", { name: customerName(order) })}
-                              </span>
-                              <span className="block text-xs text-gray-500">
-                                {order.orderNumber} · {formatPrice(order.totalprice)} · {formatWhen(order.createdAt)}
-                              </span>
-                            </span>
-                          </button>
-                        );
-                      })
-                    ) : (
-                      <p className="mt-3 text-sm text-gray-500">{t("nav.noNotifications")}</p>
-                    )}
                   </div>
-
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setNotificationsOpen(false);
-                      navigate("/orders");
-                    }}
-                    className="mt-3 w-full rounded-lg bg-[#062B63] py-2 text-sm font-semibold text-white"
-                  >
-                    {t("notify.viewAll")}
-                  </button>
-                </div>
-              )}
-            </div>
+                )}
+              </div>
+            )}
 
             <div ref={dropdownRef} className="relative">
               <button type="button" onClick={() => setProfileOpen((open) => !open)} aria-label={t("nav.editProfile")}>
