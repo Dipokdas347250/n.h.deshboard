@@ -221,9 +221,14 @@ function MerchantDetail({ id, onClose, onChanged }) {
           <section>
             <div className="mb-2 flex items-center justify-between gap-2">
               <h3 className="font-semibold">{t("nav.paymentProofs")}</h3>
-              <Link to={`/merchants/payments?merchant=${merchant._id}`} className="text-xs text-sky-200 underline">
-                {t("mlist.openAll")}
-              </Link>
+              <span className="flex gap-3">
+                <Link to={`/merchants/referrals?merchant=${merchant._id}`} className="text-xs text-sky-200 underline">
+                  {t("nav.referrals")}
+                </Link>
+                <Link to={`/merchants/payments?merchant=${merchant._id}`} className="text-xs text-sky-200 underline">
+                  {t("mlist.openAll")}
+                </Link>
+              </span>
             </div>
             {merchant.paymentProofs?.length ? (
               <ul className="divide-y divide-white/10 rounded-xl bg-white/5 text-sm">

@@ -30,10 +30,13 @@ import PaymentReviews from "./components/merchants/PaymentReviews";
 import SupportTickets, { AdminTicket } from "./components/merchants/SupportTickets";
 import AuditLog from "./components/merchants/AuditLog";
 import NotificationCenter from "./components/common/NotificationCenter";
+import LandingPageManager from "./components/pages/LandingPageManager";
 
 const AdminNotifications = () => <NotificationCenter role="admin" />;
 const MerchantNotifications = () => <NotificationCenter role="merchant" />;
 import MerchantBilling from "./components/merchant/MerchantBilling";
+import MerchantReferrals from "./components/merchant/MerchantReferrals";
+import Referrals from "./components/merchants/Referrals";
 import MerchantSupport, { MerchantTicket } from "./components/merchant/MerchantSupport";
 
 const MerchantAddProduct = () => <AddProduct merchant />;
@@ -57,10 +60,12 @@ const router = createBrowserRouter([
       { path: "transactions", Component: Transactions },
       { path: "analytics", Component: Analytics },
       { path: "settings", Component: Settings },
+      { path: "landing-page", Component: LandingPageManager },
       { path: "merchants", Component: MerchantList },
       { path: "merchants/applications", Component: MerchantApplications },
       { path: "merchants/products", Component: ProductApprovals },
       { path: "merchants/payments", Component: PaymentReviews },
+      { path: "merchants/referrals", Component: Referrals },
       { path: "merchants/support", Component: SupportTickets },
       { path: "merchants/support/:id", Component: AdminTicket },
       { path: "merchants/audit", Component: AuditLog },
@@ -75,6 +80,7 @@ const router = createBrowserRouter([
           { path: "products/new", Component: MerchantAddProduct },
           { path: "orders", Component: MerchantOrders },
           { path: "billing", Component: MerchantBilling },
+          { path: "referrals", Component: MerchantReferrals },
           { path: "support", Component: MerchantSupport },
           { path: "support/:id", Component: MerchantTicket },
           { path: "notifications", Component: MerchantNotifications },

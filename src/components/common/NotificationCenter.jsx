@@ -5,7 +5,7 @@ import { useLanguage } from "../../i18n/useLanguage";
 import { PageShell, ErrorNote, EmptyNote } from "./PageShell";
 import { useNotificationText } from "./notificationText";
 
-const CATEGORIES = ["subscription", "payment", "support", "suspension", "reactivation", "application"];
+const CATEGORIES = ["subscription", "payment", "referral", "support", "suspension", "reactivation", "application"];
 /** Merchants never get application notices. */
 const MERCHANT_CATEGORIES = CATEGORIES.filter((category) => category !== "application");
 

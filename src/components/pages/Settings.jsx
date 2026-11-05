@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { api } from "../../lib/api";
 import { useLanguage } from "../../i18n/useLanguage";
-import { PageShell, ErrorNote, SuccessNote, Field, inputClass } from "../common/PageShell";
+import { PageShell, ErrorNote, SuccessNote, Field, inputClass, selectClass } from "../common/PageShell";
 
 const BLANK_ZONE = { key: "", label: "", labelBn: "", charge: 0, estimatedDays: "2-3", estimatedDaysBn: "২-৩" };
 
@@ -44,6 +44,15 @@ export default function Settings() {
       deliveryZones: current.deliveryZones.map((zone, zoneIndex) => (zoneIndex === index ? { ...zone, ...patch } : zone)),
     }));
 
+  const updateWallet = (method, patch) =>
+    setSettings((current) => {
+      const accounts = current.merchantBilling?.accounts || {};
+      return {
+        ...current,
+        merchantBilling: { ...current.merchantBilling, accounts: { ...accounts, [method]: { ...accounts[method], ...patch } } },
+      };
+    });
+
   const save = async (event) => {
     event.preventDefault();
     setBusy(true);
@@ -60,6 +69,7 @@ export default function Settings() {
         metaPixelId: settings.metaPixelId || "",
         steadfast: { ...keys, autoSend: Boolean(settings.steadfast?.autoSend) },
         merchantBilling: settings.merchantBilling,
+        merchantReferral: settings.merchantReferral,
       });
       setSettings(response.data.data);
       setKeys(NO_KEYS);
@@ -276,6 +286,47 @@ export default function Settings() {
                 min="0"
                 value={settings.merchantBilling?.defaultFee ?? 0}
                 onChange={(event) => setSettings({ ...settings, merchantBilling: { ...settings.merchantBilling, defaultFee: event.target.value } })}
+                className={inputClass}
+              />
+            </Field>
+            {["bkash", "nagad"].map((method) => (
+              <div key={method} className="grid grid-cols-[1fr_9rem] gap-2">
+                <Field label={t("billingSettings.walletNumber", { method: t(`method.${method}`) })} htmlFor={`wallet-${method}`}>
+                  <input
+                    id={`wallet-${method}`}
+                    type="tel"
+                    inputMode="numeric"
+                    placeholder="01XXXXXXXXX"
+                    value={settings.merchantBilling?.accounts?.[method]?.number || ""}
+                    onChange={(event) => updateWallet(method, { number: event.target.value })}
+                    className={`${inputClass} font-mono`}
+                  />
+                </Field>
+                <Field label={t("billingSettings.walletType")} htmlFor={`wallet-${method}-type`}>
+                  <select
+                    id={`wallet-${method}-type`}
+                    value={settings.merchantBilling?.accounts?.[method]?.type || "personal"}
+                    onChange={(event) => updateWallet(method, { type: event.target.value })}
+                    className={selectClass}
+                  >
+                    {["personal", "agent", "merchant"].map((type) => (
+                      <option key={type} value={type}>
+                        {t(`wallet.${type}`)}
+                      </option>
+                    ))}
+                  </select>
+                </Field>
+              </div>
+            ))}
+            <p className="text-xs text-white/50 md:col-span-2">{t("billingSettings.walletHint")}</p>
+            <Field label={t("billingSettings.referralCredit")} hint={t("billingSettings.referralCreditHint")} htmlFor="referral-credit">
+              <input
+                id="referral-credit"
+                type="number"
+                min="0"
+                max="100000"
+                value={settings.merchantReferral?.creditAmount ?? 100}
+                onChange={(event) => setSettings({ ...settings, merchantReferral: { ...settings.merchantReferral, creditAmount: event.target.value } })}
                 className={inputClass}
               />
             </Field>

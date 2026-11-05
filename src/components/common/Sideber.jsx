@@ -1,6 +1,6 @@
 import { NavLink, useNavigate } from "react-router";
 import { IoClose, IoSettingsSharp } from "react-icons/io5";
-import { FaBorderAll, FaShopify, FaStore, FaUsers, FaVideo, FaMoneyCheckDollar, FaHeadset, FaClipboardList } from "react-icons/fa6";
+import { FaBorderAll, FaShopify, FaStore, FaUsers, FaVideo, FaMoneyCheckDollar, FaHeadset, FaClipboardList, FaGift } from "react-icons/fa6";
 import { AiFillProduct } from "react-icons/ai";
 import { MdOutlineLibraryBooks } from "react-icons/md";
 import { VscArrowSwap } from "react-icons/vsc";
@@ -51,6 +51,7 @@ const Sideber = ({ open = false, onClose = () => {} }) => {
         { to: "/merchants", label: t("nav.merchantList"), icon: FaStore, end: true },
         { to: "/merchants/products", label: t("nav.productApprovals"), icon: FaStore },
         { to: "/merchants/payments", label: t("nav.paymentProofs"), icon: FaMoneyCheckDollar },
+        { to: "/merchants/referrals", label: t("nav.referrals"), icon: FaGift },
         { to: "/merchants/support", label: t("nav.supportTickets"), icon: FaHeadset },
         { to: "/merchants/audit", label: t("nav.auditLog"), icon: FaClipboardList },
         { to: "/notifications", label: t("center.title"), icon: BsBellFill },
@@ -65,6 +66,7 @@ const Sideber = ({ open = false, onClose = () => {} }) => {
     { to: "/customers", label: t("nav.customers"), icon: FaUsers },
     { to: "/transactions", label: t("nav.transactions"), icon: VscArrowSwap },
     { to: "/analytics", label: t("nav.analytics"), icon: BsBarChartFill },
+    { to: "/landing-page", label: t("nav.landingPage"), icon: GiVerticalBanner },
     { to: "/settings", label: t("nav.settings"), icon: IoSettingsSharp },
   ];
 
@@ -75,6 +77,7 @@ const Sideber = ({ open = false, onClose = () => {} }) => {
     { to: "/merchant/products", label: t("mnav.products"), icon: FaShopify, end: true },
     { to: "/merchant/orders", label: t("mnav.orders"), icon: MdOutlineLibraryBooks },
     { to: "/merchant/billing", label: t("mnav.billing"), icon: FaMoneyCheckDollar },
+    { to: "/merchant/referrals", label: t("mnav.referrals"), icon: FaGift },
     { to: "/merchant/support", label: t("mnav.support"), icon: FaHeadset },
     { to: "/merchant/notifications", label: t("center.title"), icon: BsBellFill },
   ];

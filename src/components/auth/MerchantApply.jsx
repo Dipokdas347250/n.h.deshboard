@@ -1,12 +1,12 @@
 import { useState } from "react";
-import { Link } from "react-router";
+import { Link, useSearchParams } from "react-router";
 import { api } from "../../lib/api";
 import { useLanguage } from "../../i18n/useLanguage";
 import AuthShell from "./AuthShell";
 import { ErrorNote, Field, inputClass } from "../common/PageShell";
 
 const TRIAL_DAYS = 7;
-const BLANK = { fullname: "", phone: "", email: "", businessName: "", address: "", facebookPage: "", productType: "", nidNumber: "", password: "" };
+const BLANK = { fullname: "", phone: "", email: "", businessName: "", address: "", facebookPage: "", productType: "", nidNumber: "", password: "", referralCode: "" };
 
 const fileClass =
   "w-full cursor-pointer rounded-lg bg-white/15 p-2 text-white file:mr-3 file:rounded-md file:border-none file:bg-green-500 file:px-4 file:py-2 file:text-white";
@@ -17,7 +17,9 @@ const fileClass =
  */
 export default function MerchantApply() {
   const { t, apiMessage, formatNumber } = useLanguage();
-  const [form, setForm] = useState(BLANK);
+  // A referral link is /apply?ref=CODE: the code is filled in for them.
+  const [searchParams] = useSearchParams();
+  const [form, setForm] = useState(() => ({ ...BLANK, referralCode: (searchParams.get("ref") || "").trim().toUpperCase().slice(0, 20) }));
   const [nidFront, setNidFront] = useState(null);
   const [nidBack, setNidBack] = useState(null);
   const [error, setError] = useState("");
@@ -137,6 +139,18 @@ export default function MerchantApply() {
           </Field>
         </div>
         <p className="text-xs text-white/60">{t("apply.nidPrivacy")}</p>
+
+        <Field label={`${t("apply.referralCode")} (${t("common.optional")})`} hint={t("apply.referralHint")} htmlFor="apply-referral">
+          <input
+            id="apply-referral"
+            name="referralCode"
+            maxLength={20}
+            autoComplete="off"
+            value={form.referralCode}
+            onChange={change}
+            className={`${inputClass} font-mono uppercase`}
+          />
+        </Field>
 
         <Field label={t("apply.password")} hint={t("apply.passwordHint")} htmlFor="apply-password">
           <input

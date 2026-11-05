@@ -59,10 +59,41 @@ function PaymentDetail({ id, periodDays, onClose, onChanged }) {
       ) : (
         <div className="grid gap-6 md:grid-cols-2">
           <div>
-            <a href={submission.screenshot?.url} target="_blank" rel="noreferrer noopener" title={t("pay.openScreenshot")}>
-              <img src={submission.screenshot?.url} alt={t("billing.screenshot")} className="max-h-[28rem] w-full rounded-xl bg-white/5 object-contain" />
-            </a>
-            <p className="mt-1 text-center text-xs text-white/50">{t("pay.openScreenshot")}</p>
+            {submission.screenshot?.url ? (
+              <>
+                <a href={submission.screenshot.url} target="_blank" rel="noreferrer noopener" title={t("pay.openScreenshot")}>
+                  <img src={submission.screenshot.url} alt={t("billing.screenshot")} className="max-h-[28rem] w-full rounded-xl bg-white/5 object-contain" />
+                </a>
+                <p className="mt-1 text-center text-xs text-white/50">{t("pay.openScreenshot")}</p>
+              </>
+            ) : (
+              <p className="rounded-xl bg-green-500/10 p-6 text-center text-green-100">{t("pay.creditOnly")}</p>
+            )}
+            {submission.fee > 0 && (
+              <dl className="mt-4 space-y-1 rounded-xl bg-white/5 p-4 text-sm">
+                <p className="mb-2 font-semibold">{t("billing.invoiceTitle")}</p>
+                <div className="flex justify-between">
+                  <dt className="text-white/60">{t("billing.fee")}</dt>
+                  <dd>{formatPrice(submission.fee)}</dd>
+                </div>
+                <div className="flex justify-between">
+                  <dt className="text-white/60">{t("billing.creditApplied")}</dt>
+                  <dd className="text-green-200">− {formatPrice(submission.creditApplied)}</dd>
+                </div>
+                <div className="flex justify-between border-t border-white/10 pt-1 font-semibold">
+                  <dt>{t("billing.payable")}</dt>
+                  <dd>{formatPrice(submission.expectedAmount)}</dd>
+                </div>
+              </dl>
+            )}
+            {submission.merchantCredit && (
+              <p className="mt-2 text-xs text-white/60">
+                {t("pay.merchantCredit", { amount: formatPrice(submission.merchantCredit.available) })}{" "}
+                <Link to={`/merchants/referrals?merchant=${merchant?._id}`} className="text-sky-200 underline">
+                  {t("refAdmin.history")}
+                </Link>
+              </p>
+            )}
           </div>
 
           <div className="space-y-4 text-sm">
@@ -75,7 +106,7 @@ function PaymentDetail({ id, periodDays, onClose, onChanged }) {
                 <dd className="text-lg font-bold">{formatPrice(submission.amount)}</dd>
                 {submission.expectedAmount > 0 && (
                   <dd className={`text-xs ${submission.amount < submission.expectedAmount ? "text-red-100" : "text-white/60"}`}>
-                    {t(submission.amount < submission.expectedAmount ? "pay.lessThanFee" : "pay.expectedFee", { amount: formatPrice(submission.expectedAmount) })}
+                    {t(submission.amount < submission.expectedAmount ? "pay.lessThanDue" : "pay.amountDue", { amount: formatPrice(submission.expectedAmount) })}
                   </dd>
                 )}
               </div>
@@ -83,14 +114,37 @@ function PaymentDetail({ id, periodDays, onClose, onChanged }) {
                 <dt className="text-white/60">{t("pay.method")}</dt>
                 <dd className="font-semibold">{methodLabel(t, submission)}</dd>
               </div>
-              <div className="col-span-2 rounded-lg bg-white/5 p-3">
-                <dt className="text-white/60">{t("pay.transactionId")}</dt>
-                <dd className="select-all break-all font-mono text-base font-bold">{submission.transactionId}</dd>
-              </div>
+              {submission.transactionId && (
+                <div className="col-span-2 rounded-lg bg-white/5 p-3">
+                  <dt className="text-white/60">{t("pay.transactionId")}</dt>
+                  <dd className="select-all break-all font-mono text-base font-bold">{submission.transactionId}</dd>
+                </div>
+              )}
+              {submission.payTo && (
+                <div className="rounded-lg bg-white/5 p-3">
+                  <dt className="text-white/60">{t("billing.payTo")}</dt>
+                  <dd className="font-mono">{submission.payTo}</dd>
+                </div>
+              )}
+              {submission.paidAt && (
+                <div className="rounded-lg bg-white/5 p-3">
+                  <dt className="text-white/60">{t("billing.paidAt")}</dt>
+                  <dd>{formatDate(submission.paidAt)}</dd>
+                </div>
+              )}
               <div className="col-span-2 rounded-lg bg-white/5 p-3">
                 <dt className="text-white/60">{t("pay.submitted")}</dt>
                 <dd>{when(submission.createdAt)}</dd>
               </div>
+              {submission.reviewedAt && (
+                <div className="col-span-2 rounded-lg bg-white/5 p-3">
+                  <dt className="text-white/60">{t("pay.verifiedAt")}</dt>
+                  <dd>
+                    {when(submission.reviewedAt)}
+                    {submission.reviewedBy?.fullname && ` · ${submission.reviewedBy.fullname}`}
+                  </dd>
+                </div>
+              )}
             </dl>
             {submission.message && (
               <div className="rounded-lg bg-white/5 p-3">
@@ -285,13 +339,15 @@ export default function PaymentReviews() {
         <p className="text-white/70">{t("common.loading")}</p>
       ) : data.submissions.length ? (
         <div className="overflow-x-auto rounded-xl bg-white/5">
-          <table className="w-full min-w-[760px] text-left text-sm">
+          <table className="w-full min-w-[960px] text-left text-sm">
             <thead className="bg-white/10 text-white/70">
               <tr>
                 <th className="p-3">{t("pay.merchant")}</th>
                 <th className="p-3">{t("pay.amount")}</th>
                 <th className="p-3">{t("pay.transactionId")}</th>
+                <th className="p-3">{t("billing.paidAt")}</th>
                 <th className="p-3">{t("pay.submitted")}</th>
+                <th className="p-3">{t("pay.verifiedAt")}</th>
                 <th className="p-3">{t("support.status")}</th>
                 <th className="p-3" />
               </tr>
@@ -307,9 +363,12 @@ export default function PaymentReviews() {
                   <td className="p-3">
                     <span className="block font-semibold">{formatPrice(submission.amount)}</span>
                     <span className="block text-xs text-white/60">{methodLabel(t, submission)}</span>
+                    {submission.creditApplied > 0 && <span className="block text-xs text-green-200">{t("pay.plusCredit", { amount: formatPrice(submission.creditApplied) })}</span>}
                   </td>
-                  <td className="p-3 font-mono">{submission.transactionId}</td>
+                  <td className="p-3 font-mono">{submission.transactionId || "—"}</td>
+                  <td className="p-3">{submission.paidAt ? formatDate(submission.paidAt) : "—"}</td>
                   <td className="p-3">{formatDate(submission.createdAt)}</td>
+                  <td className="p-3">{submission.reviewedAt ? formatDate(submission.reviewedAt) : "—"}</td>
                   <td className="p-3">
                     <StatusBadge kind="paymentShort" value={submission.status} />
                   </td>

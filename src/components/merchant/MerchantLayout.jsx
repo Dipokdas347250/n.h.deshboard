@@ -43,7 +43,7 @@ export function SubscriptionNotice({ merchant }) {
 }
 
 /** Pages a suspended merchant can still use, so a closed account can always pay or ask for help. */
-const OPEN_WHILE_SUSPENDED = ["/merchant/billing", "/merchant/support", "/merchant/notifications"];
+const OPEN_WHILE_SUSPENDED = ["/merchant/billing", "/merchant/referrals", "/merchant/support", "/merchant/notifications"];
 
 /**
  * Frame for every merchant page. Loads the merchant's own account on each

@@ -5,7 +5,7 @@ import { merchantCode } from "../../lib/merchantCode";
 import { useLanguage } from "../../i18n/useLanguage";
 import { PageShell, ErrorNote, EmptyNote } from "../common/PageShell";
 
-const GROUPS = ["payment", "account", "subscription", "ticket"];
+const GROUPS = ["payment", "referral", "credit", "account", "subscription", "ticket"];
 
 const chipClass = (active) =>
   `rounded-full px-4 py-2 text-sm font-semibold transition ${active ? "bg-white text-[#062B63]" : "bg-white/10 text-white hover:bg-white/20"}`;
